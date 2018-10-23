@@ -6,6 +6,7 @@ import click
 
 
 def collapse_homopolymers(sequence, max_length=2):
+    assert max_length > 0, "max_length must be greater than 0"
     collapsed = []
 
     def base_counter():
