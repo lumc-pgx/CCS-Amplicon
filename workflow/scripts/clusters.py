@@ -40,7 +40,10 @@ def find_clusters(embeddings, similarity_threshold, inflation):
 
 def sort_cluster_elements(cluster, embeddings, info):
     # prioritize by distance from cluster center
-    cluster_center = [np.mean([embeddings[c][0] for c in cluster]), np.mean([embeddings[c][1] for c in cluster])]
+    cluster_center = [
+        np.mean([embeddings[c][0] for c in cluster for _ in range(info.iloc[c]["np"])]), 
+        np.mean([embeddings[c][1] for c in cluster for _ in range(info.iloc[c]["np"])])
+    ]
     offset = [euclidean_dist(cluster_center, embeddings[x]) for x in range(len(embeddings))]
     sorted_cluster = sorted(cluster, key=lambda x: (-offset[x], info.iloc[x]["rq"]), reverse=True)
     return cluster_center, sorted_cluster
