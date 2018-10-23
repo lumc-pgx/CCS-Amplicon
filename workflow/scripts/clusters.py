@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from __future__ import print_function, division
 import pandas as pd
 import numpy as np
 import markov_clustering as mc
@@ -37,6 +38,17 @@ def find_clusters(embeddings, similarity_threshold, inflation):
     return clusters
 
 
+def sort_cluster_elements(cluster, embeddings):
+    # prioritize by distance from cluster center
+    cluster_center = [np.mean([embeddings[c][0] for c in cluster]), np.mean([embeddings[c][1] for c in cluster])]
+    print(cluster_center)
+    offset = [euclidean_dist(cluster_center, embeddings[x]) for x in range(len(embeddings))]
+    
+    sorted_cluster = sorted(cluster, key=lambda x: offset[x])
+    cluster_offsets = [offset[c] for c in sorted_cluster]
+    print(cluster_offsets)
+    return sorted_cluster
+
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
     ),
@@ -50,6 +62,7 @@ def find_clusters(embeddings, similarity_threshold, inflation):
 def cli_handler(similarity_threshold, inflation, embeddings):
     embedded = pd.read_csv(embeddings, sep="\t", header=None).values
     clusters = find_clusters(embedded, similarity_threshold, inflation)
+    clusters = [sort_cluster_elements(c, embedded) for c in clusters]
     for cluster in clusters:
         print(" ".join([str(c) for c in cluster]))
 
