@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import markov_clustering as mc
 import click
+import json
 
 def similarity_from_dists(dists):
     max_dist = np.max(dists)
@@ -49,7 +50,24 @@ def sort_cluster_elements(cluster, embeddings, info):
     
     offset = [euclidean_dist(cluster_center, embeddings[x]) for x in range(len(embeddings))]
     sorted_cluster = sorted(cluster, key=lambda x: (-offset[x], info.iloc[x]["rq"]), reverse=True)
-    return cluster_center, sorted_cluster
+    return sorted_cluster
+
+
+def cluster_coverage(cluster, info):
+    return int(sum([info.iloc[c]["np"] for c in cluster]))
+
+
+def get_coverage(clusters, info):
+    return sum([sum([cluster_coverage(cluster, info)]) for cluster in clusters])
+
+
+def filter_cluster_coverage(clusters, info, max_coverage):
+    total_coverage = get_coverage(clusters, info)
+    while total_coverage > max_coverage:
+        clusters = [cluster[:-1] for cluster in clusters]
+        total_coverage = get_coverage(clusters, info)
+    return clusters
+
 
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
@@ -60,16 +78,30 @@ def sort_cluster_elements(cluster, embeddings, info):
               help="minimum similarity percentile")
 @click.option("--inflation", "-i", type=float, default=1.4,
               help="MCL cluster inflation")
+@click.option("--coverage", "-c", type=int, default=500,
+              help="limit the total coverage")
 @click.argument("embeddings", type=click.Path(exists=True))
 @click.argument("sequence_info", type=click.Path(exists=True))
-def cli_handler(similarity_threshold, inflation, embeddings, sequence_info):
+def cli_handler(similarity_threshold, inflation, coverage, embeddings, sequence_info):
     embedded = pd.read_csv(embeddings, sep="\t", header=None).values
     info = pd.read_csv(sequence_info, sep="\t")
     clusters = find_clusters(embedded, similarity_threshold, inflation)
     clusters = [sort_cluster_elements(c, embedded, info) for c in clusters]
-    for cluster in clusters:
-        print("# {}".format(cluster[0]))
-        print(" ".join([str(c) for c in cluster[1]]))
+    clusters = filter_cluster_coverage(clusters, info, coverage)
+
+    print(
+        json.dumps(
+            [
+                {
+                    "cluster": i,
+                    "members": cluster,
+                    "coverage": cluster_coverage(cluster, info),
+                }
+                for i, cluster in enumerate(clusters)
+            ],
+            sort_keys=True, indent=4, separators=(",", ": ")
+        )
+    )
 
 
 if __name__ == '__main__':
