@@ -10,12 +10,12 @@ def similarity_from_dists(dists):
     return 1.0 - dists / max_dist
 
 
-def euclidean_dist_squared(p1, p2):
-    return np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2)
+def euclidean_dist_squared(v1, v2):
+    return np.sum([np.power(v1[i] - v2[i], 2) for i in range(len(v1))])
 
 
-def euclidean_dist(p1, p2):
-    return np.sqrt(euclidean_dist_squared(p1, p2))
+def euclidean_dist(v1, v2):
+    return np.sqrt(euclidean_dist_squared(v1, v2))
 
 
 def distances_from_embeddings(embeddings):
