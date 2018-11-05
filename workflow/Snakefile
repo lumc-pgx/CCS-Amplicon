@@ -1,0 +1,86 @@
+CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/plate2/preprocessor/CCS/lbc20.bam"
+MIN_READ_LENGTH = 6000
+MAX_READ_LENGTH = 7000
+MIN_PASSES = 1
+MIN_QUAL = 0.98
+MAX_HP_LEN = 3
+TSNE_ITERS = 5000
+TSNE_LR = 50
+CLUSTER_SIMILARITY_PERCENTILE = 80
+CLUSTER_INFLATION = 1.4
+CLUSTER_COVERAGE_LIMIT = 500
+
+
+SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
+SCRIPT_DIR = srcdir("scripts")
+
+
+rule all:
+    input: "ccs.filtered.clusters.json"
+
+
+rule filter_ccs_bam:
+    input: CCS_BAM
+    output: "ccs.filtered.bam"
+    message: "filtering CCS bam file"
+    shell:
+        "bamtools filter -in {input} -out {output} -length '>={MIN_READ_LENGTH}' -length '<={MAX_READ_LENGTH}' "
+        "-tag 'np:>={MIN_PASSES}' -tag 'rq:>={MIN_QUAL}'"
+
+
+rule pb_index:
+    input: "{prefix}.bam"
+    output: "{prefix}.bam.pbi"
+    message: "generating index for filtered CCS bam file"
+    shell: "{SMRTCMD_PATH}/pbindex {input}"
+
+
+rule bam2fasta:
+    input:
+        bam = "{prefix}.bam",
+        index = "{prefix}.bam.pbi"
+    output: "{prefix}.fasta"
+    message: "converting bam to fasta"
+    shell: "{SMRTCMD_PATH}/bam2fasta -o - {input.bam} > {output}"
+
+
+rule collapse_hp:
+    input: "{prefix}.fasta"
+    output: "{prefix}.collapse_hp.fasta"
+    message: "collapsing homopolymer runs"
+    shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {MAX_HP_LEN} {input} > {output}"
+
+
+rule distance_matrix:
+    input: "{prefix}.collapse_hp.fasta"
+    output: "{prefix}.dists.tsv"
+    message: "creating distance matrix"
+    shell: "{SCRIPT_DIR}/distance_matrix.py {input} > {output}"
+
+
+rule embed:
+    input: "{prefix}.dists.tsv"
+    output:
+        embeddings = "{prefix}.embedded.tsv",
+        history = "{prefix}.embedded.log"
+    message: "embedding in two dimensions using tSNE"
+    shell: "{SCRIPT_DIR}/embed.py -i {TSNE_ITERS} -lr {TSNE_LR} {input} > {output.embeddings} 2>{output.history}"
+
+
+rule ccs_info:
+    input: "{prefix}.bam"
+    output: "{prefix}.bam.info"
+    message: "generating summary information for CCS sequences"
+    shell: "{SCRIPT_DIR}/baminfo.py {input} > {output}"
+
+
+rule cluster:
+    input:
+        embeddings = "{prefix}.embedded.tsv",
+        info = "{prefix}.bam.info"
+    output: "{prefix}.clusters.json"
+    message: "identifying clusters"
+    shell: "{SCRIPT_DIR}/clusters.py -s {CLUSTER_SIMILARITY_PERCENTILE} -i {CLUSTER_INFLATION} "
+           "-c {CLUSTER_COVERAGE_LIMIT} {input.embeddings} {input.info} > {output}"
+
+
