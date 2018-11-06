@@ -16,7 +16,7 @@ SCRIPT_DIR = srcdir("scripts")
 
 
 rule all:
-    input: "ccs.filtered.clusters.json"
+    input: dynamic("ccs.filtered.cluster{clusterid}.msa")
 
 
 rule filter_ccs_bam:
@@ -84,3 +84,17 @@ rule cluster:
            "-c {CLUSTER_COVERAGE_LIMIT} {input.embeddings} {input.info} > {output}"
 
 
+rule cluster_seqs:
+    input:
+        seqs = "{prefix}.collapse_hp.fasta",
+        clusters = "{prefix}.clusters.json"
+    output: dynamic("{prefix}.cluster{clusterid}.fasta")
+    message: "creating per-cluster sequence files"
+    shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p {wildcards.prefix} {input.seqs} {input.clusters}"
+
+
+rule mafft_msa:
+    input: "{prefix}.cluster{clusterid}.fasta"
+    output: "{prefix}.cluster{clusterid}.msa"
+    message: "mafft alignment of cluster sequences"
+    shell: "mafft --auto --quiet {input} > {output}"

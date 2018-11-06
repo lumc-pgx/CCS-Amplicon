@@ -10,7 +10,7 @@ import json
     ),
     short_help="generate fasta files for clusters"
 )
-@click.option("--prefix", "-p", type=str, default="cluster",
+@click.option("--prefix", "-p", type=str, default="",
               help="prefix for output file names")
 @click.argument("sequence_fasta", type=click.Path(exists=True))
 @click.argument("clusters_json", type=click.Path(exists=True))
@@ -18,7 +18,10 @@ def cli_handler(prefix, sequence_fasta, clusters_json):
     with open(clusters_json, "r") as infile:
         clusters = json.load(infile)
 
-    output_files = [open("{}{}.fasta".format(prefix, cluster["cluster"]), "w") for cluster in clusters]
+    if prefix != "":
+        prefix = prefix + "."
+
+    output_files = [open("{}cluster{}.fasta".format(prefix, cluster["cluster"]), "w") for cluster in clusters]
 
     for i, record in enumerate(SeqIO.parse(sequence_fasta, "fasta")):
         for j, cluster in enumerate(clusters):
