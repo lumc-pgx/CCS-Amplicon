@@ -9,19 +9,19 @@ TSNE_LR = 50
 CLUSTER_SIMILARITY_PERCENTILE = 80
 CLUSTER_INFLATION = 1.4
 CLUSTER_COVERAGE_LIMIT = 500
-
+CONSENSUS_FRACTION = 0.51
 
 SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
 SCRIPT_DIR = srcdir("scripts")
 
 
 rule all:
-    input: dynamic("ccs.filtered.cluster{clusterid}.msa")
+    input: dynamic("consensus/ccs.filtered.cluster{clusterid}.consensus.fasta")
 
 
 rule filter_ccs_bam:
     input: CCS_BAM
-    output: "ccs.filtered.bam"
+    output: "filtered/ccs.filtered.bam"
     message: "filtering CCS bam file"
     shell:
         "bamtools filter -in {input} -out {output} -length '>={MIN_READ_LENGTH}' -length '<={MAX_READ_LENGTH}' "
@@ -37,64 +37,72 @@ rule pb_index:
 
 rule bam2fasta:
     input:
-        bam = "{prefix}.bam",
-        index = "{prefix}.bam.pbi"
-    output: "{prefix}.fasta"
+        bam = "filtered/{prefix}.bam",
+        index = "filtered/{prefix}.bam.pbi"
+    output: "filtered/{prefix}.fasta"
     message: "converting bam to fasta"
     shell: "{SMRTCMD_PATH}/bam2fasta -o - {input.bam} > {output}"
 
 
 rule collapse_hp:
-    input: "{prefix}.fasta"
-    output: "{prefix}.collapse_hp.fasta"
+    input: "filtered/{prefix}.fasta"
+    output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
     shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {MAX_HP_LEN} {input} > {output}"
 
 
 rule distance_matrix:
-    input: "{prefix}.collapse_hp.fasta"
-    output: "{prefix}.dists.tsv"
+    input: "collapsed/{prefix}.collapse_hp.fasta"
+    output: "clustering/{prefix}.dists.tsv"
     message: "creating distance matrix"
     shell: "{SCRIPT_DIR}/distance_matrix.py {input} > {output}"
 
 
 rule embed:
-    input: "{prefix}.dists.tsv"
+    input: "clustering/{prefix}.dists.tsv"
     output:
-        embeddings = "{prefix}.embedded.tsv",
-        history = "{prefix}.embedded.log"
+        embeddings = "clustering/{prefix}.embedded.tsv",
+        history = "clustering/{prefix}.embedded.log"
     message: "embedding in two dimensions using tSNE"
     shell: "{SCRIPT_DIR}/embed.py -i {TSNE_ITERS} -lr {TSNE_LR} {input} > {output.embeddings} 2>{output.history}"
 
 
 rule ccs_info:
-    input: "{prefix}.bam"
-    output: "{prefix}.bam.info"
+    input: "filtered/{prefix}.bam"
+    output: "filtered/{prefix}.bam.info"
     message: "generating summary information for CCS sequences"
     shell: "{SCRIPT_DIR}/baminfo.py {input} > {output}"
 
 
 rule cluster:
     input:
-        embeddings = "{prefix}.embedded.tsv",
-        info = "{prefix}.bam.info"
-    output: "{prefix}.clusters.json"
+        embeddings = "clustering/{prefix}.embedded.tsv",
+        info = "filtered/{prefix}.bam.info"
+    output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
-    shell: "{SCRIPT_DIR}/clusters.py -s {CLUSTER_SIMILARITY_PERCENTILE} -i {CLUSTER_INFLATION} "
+    shell: "{SCRIPT_DIR}/cluster.py -s {CLUSTER_SIMILARITY_PERCENTILE} -i {CLUSTER_INFLATION} "
            "-c {CLUSTER_COVERAGE_LIMIT} {input.embeddings} {input.info} > {output}"
 
 
 rule cluster_seqs:
     input:
-        seqs = "{prefix}.collapse_hp.fasta",
-        clusters = "{prefix}.clusters.json"
-    output: dynamic("{prefix}.cluster{clusterid}.fasta")
+        seqs = "collapsed/{prefix}.collapse_hp.fasta",
+        clusters = "clustering/{prefix}.clusters.json"
+    output: dynamic("clustering/{prefix}.cluster{clusterid}.fasta")
     message: "creating per-cluster sequence files"
-    shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p {wildcards.prefix} {input.seqs} {input.clusters}"
+    shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
 
 
 rule mafft_msa:
-    input: "{prefix}.cluster{clusterid}.fasta"
-    output: "{prefix}.cluster{clusterid}.msa"
+    input: "clustering/{prefix}.cluster{clusterid}.fasta"
+    output: "consensus/{prefix}.cluster{clusterid}.msa"
     message: "mafft alignment of cluster sequences"
     shell: "mafft --auto --quiet {input} > {output}"
+
+
+rule consensus:
+    input: "consensus/{prefix}.cluster{clusterid}.msa"
+    output: "consensus/{prefix}.cluster{clusterid}.consensus.fasta"
+    message: "generating cluster consensus sequence"
+    shell: "{SCRIPT_DIR}/consensus.py -f {CONSENSUS_FRACTION} "
+           "-s {wildcards.prefix}.cluster{wildcards.clusterid}.consensus {input} > {output}"
