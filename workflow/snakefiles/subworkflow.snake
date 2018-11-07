@@ -1,23 +1,9 @@
-PLATE = "plate2"
-BARCODE = "lbc20"
-
-CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/CCS/{}.bam".format(PLATE, BARCODE)
-SUBREADS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/consolidated/{}.bam".format(PLATE, BARCODE)
-MIN_READ_LENGTH = 6000
-MAX_READ_LENGTH = 7000
-MIN_PASSES = 1
-MIN_QUAL = 0.98
-MAX_HP_LEN = 2
-TSNE_ITERS = 5000
-TSNE_LR = 50
-CLUSTER_SIMILARITY_PERCENTILE = 80
-CLUSTER_INFLATION = 1.4
-CLUSTER_COVERAGE_LIMIT = 500
 CONSENSUS_FRACTION = 0.51
 MIN_HAPLOTYPE_MOLECULES = 10
+MIN_VARIANT_QUAL = 50
 
 SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
-SCRIPT_DIR = srcdir("scripts")
+SCRIPT_DIR = srcdir("../scripts")
 
 CCS_BAM = config["CCS_BAM"]
 SUBREADS_BAM = config["SUBREADS_BAM"]
@@ -71,7 +57,7 @@ rule call:
     input: rules.pileup.output
     output: "calls/{prefix}.vcf"
     message: "calling variants"
-    shell: "bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>=50' > {output}"
+    shell: "bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>={MIN_VARIANT_QUAL}' > {output}"
 
 
 rule phase:

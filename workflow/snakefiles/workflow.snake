@@ -1,8 +1,8 @@
 PLATE = "plate2"
 BARCODE = "lbc20"
-
 CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/CCS/{}.bam".format(PLATE, BARCODE)
 SUBREADS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/consolidated/{}.bam".format(PLATE, BARCODE)
+
 MIN_READ_LENGTH = 6000
 MAX_READ_LENGTH = 7000
 MIN_PASSES = 1
@@ -13,12 +13,9 @@ TSNE_LR = 50
 CLUSTER_SIMILARITY_PERCENTILE = 80
 CLUSTER_INFLATION = 1.4
 CLUSTER_COVERAGE_LIMIT = 500
-CONSENSUS_FRACTION = 0.51
-MIN_HAPLOTYPE_MOLECULES = 10
 
 SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
-SCRIPT_DIR = srcdir("scripts")
-SRC_DIR = srcdir(".")
+SCRIPT_DIR = srcdir("../scripts")
 
 
 rule all:
@@ -27,45 +24,45 @@ rule all:
 
 rule filter_ccs_bam:
     input: CCS_BAM
-    output: "filtered/ccs.filtered.bam"
+    output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
     shell:
         "bamtools filter -in {input} -out {output} -length '>={MIN_READ_LENGTH}' -length '<={MAX_READ_LENGTH}' "
         "-tag 'np:>={MIN_PASSES}' -tag 'rq:>={MIN_QUAL}'"
 
 
-rule pb_index:
-    input: "{prefix}.bam"
-    output: "{prefix}.bam.pbi"
-    message: "generating index for filtered CCS bam file"
+rule pbindex:
+    input: rules.filter_ccs_bam.output
+    output: "filtered/{prefix}.bam.pbi"
+    message: "generating pacbio index for bam"
     shell: "{SMRTCMD_PATH}/pbindex {input}"
 
 
 rule bam2fasta:
     input:
-        bam = "filtered/{prefix}.bam",
-        index = "filtered/{prefix}.bam.pbi"
+        bam = rules.filter_ccs_bam.output,
+        index = rules.pbindex.output
     output: "filtered/{prefix}.fasta"
     message: "converting bam to fasta"
     shell: "{SMRTCMD_PATH}/bam2fasta -o - {input.bam} > {output}"
 
 
 rule collapse_hp:
-    input: "filtered/{prefix}.fasta"
+    input: rules.bam2fasta.output
     output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
     shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {MAX_HP_LEN} {input} > {output}"
 
 
 rule distance_matrix:
-    input: "collapsed/{prefix}.collapse_hp.fasta"
+    input: rules.collapse_hp.output
     output: "clustering/{prefix}.dists.tsv"
     message: "creating distance matrix"
     shell: "{SCRIPT_DIR}/distance_matrix.py {input} > {output}"
 
 
 rule embed:
-    input: "clustering/{prefix}.dists.tsv"
+    input: rules.distance_matrix.output
     output:
         embeddings = "clustering/{prefix}.embedded.tsv",
         history = "clustering/{prefix}.embedded.log"
@@ -74,7 +71,7 @@ rule embed:
 
 
 rule ccs_info:
-    input: "filtered/{prefix}.bam"
+    input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.info"
     message: "generating summary information for CCS sequences"
     shell: "{SCRIPT_DIR}/baminfo.py {input} > {output}"
@@ -82,8 +79,8 @@ rule ccs_info:
 
 rule cluster:
     input:
-        embeddings = "clustering/{prefix}.embedded.tsv",
-        info = "filtered/{prefix}.bam.info"
+        embeddings = rules.embed.output.embeddings,
+        info = rules.ccs_info.output
     output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
     shell: "{SCRIPT_DIR}/cluster.py -s {CLUSTER_SIMILARITY_PERCENTILE} -i {CLUSTER_INFLATION} "
@@ -92,15 +89,15 @@ rule cluster:
 
 rule cluster_seqs:
     input:
-        seqs = "collapsed/{prefix}.collapse_hp.fasta",
-        clusters = "clustering/{prefix}.clusters.json"
+        seqs = rules.collapse_hp.output,
+        clusters = rules.cluster.output
     output: dynamic("clustering/{prefix}.cluster{clusterid}.fasta")
     message: "creating per-cluster sequence files"
     shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
 
 
 rule make_haplotypes:
-    input: "clustering/{prefix}.cluster{clusterid}.fasta"
+    input: rules.cluster_seqs.output
     output: "merge_laa/{prefix}.cluster{clusterid}.fastq"
     message: "running haplotype workflow for cluster {wildcards.clusterid}"
     params: snakefile = srcdir("subworkflow.snake")
