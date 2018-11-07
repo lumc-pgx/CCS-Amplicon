@@ -97,7 +97,7 @@ def cli_handler(similarity_threshold, inflation, coverage, embeddings, sequence_
                     "members": cluster,
                     "coverage": cluster_coverage(cluster, info),
                 }
-                for i, cluster in enumerate(clusters)
+                for i, cluster in enumerate(clusters) if len(cluster) > 0
             ],
             sort_keys=True, indent=4, separators=(",", ": ")
         )
