@@ -1,22 +1,28 @@
-CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/plate2/preprocessor/CCS/lbc20.bam"
+PLATE = "plate2"
+BARCODE = "lbc20"
+
+CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/CCS/{}.bam".format(PLATE, BARCODE)
+SUBREADS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/consolidated/{}.bam".format(PLATE, BARCODE)
 MIN_READ_LENGTH = 6000
 MAX_READ_LENGTH = 7000
 MIN_PASSES = 1
 MIN_QUAL = 0.98
-MAX_HP_LEN = 3
+MAX_HP_LEN = 2
 TSNE_ITERS = 5000
 TSNE_LR = 50
 CLUSTER_SIMILARITY_PERCENTILE = 80
 CLUSTER_INFLATION = 1.4
 CLUSTER_COVERAGE_LIMIT = 500
 CONSENSUS_FRACTION = 0.51
+MIN_HAPLOTYPE_MOLECULES = 10
 
 SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
 SCRIPT_DIR = srcdir("scripts")
+SRC_DIR = srcdir(".")
 
 
 rule all:
-    input: dynamic("consensus/ccs.filtered.cluster{clusterid}.consensus.fasta")
+    input: "haplotypes/ccs.filtered.fastq"
 
 
 rule filter_ccs_bam:
@@ -93,16 +99,19 @@ rule cluster_seqs:
     shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
 
 
-rule mafft_msa:
+rule make_haplotypes:
     input: "clustering/{prefix}.cluster{clusterid}.fasta"
-    output: "consensus/{prefix}.cluster{clusterid}.msa"
-    message: "mafft alignment of cluster sequences"
-    shell: "mafft --auto --quiet {input} > {output}"
+    output: "merge_laa/{prefix}.cluster{clusterid}.fastq"
+    message: "running haplotype workflow for cluster {wildcards.clusterid}"
+    params: snakefile = srcdir("subworkflow.snake")
+    shell: "snakemake -s {params.snakefile} --nolock "
+           "--config PREFIX={wildcards.prefix}.cluster{wildcards.clusterid} "
+           "CCS_BAM={CCS_BAM} "
+           "SUBREADS_BAM={SUBREADS_BAM}"
 
 
-rule consensus:
-    input: "consensus/{prefix}.cluster{clusterid}.msa"
-    output: "consensus/{prefix}.cluster{clusterid}.consensus.fasta"
-    message: "generating cluster consensus sequence"
-    shell: "{SCRIPT_DIR}/consensus.py -f {CONSENSUS_FRACTION} "
-           "-s {wildcards.prefix}.cluster{wildcards.clusterid}.consensus {input} > {output}"
+rule merge_haplotype_clusters:
+    input: dynamic("merge_laa/{prefix}.cluster{clusterid}.fastq")
+    output: "haplotypes/{prefix}.fastq"
+    message: "merging haplotype sequences"
+    shell: "cat {input} > {output}"

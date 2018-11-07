@@ -1,0 +1,151 @@
+PLATE = "plate2"
+BARCODE = "lbc20"
+
+CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/CCS/{}.bam".format(PLATE, BARCODE)
+SUBREADS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/consolidated/{}.bam".format(PLATE, BARCODE)
+MIN_READ_LENGTH = 6000
+MAX_READ_LENGTH = 7000
+MIN_PASSES = 1
+MIN_QUAL = 0.98
+MAX_HP_LEN = 2
+TSNE_ITERS = 5000
+TSNE_LR = 50
+CLUSTER_SIMILARITY_PERCENTILE = 80
+CLUSTER_INFLATION = 1.4
+CLUSTER_COVERAGE_LIMIT = 500
+CONSENSUS_FRACTION = 0.51
+MIN_HAPLOTYPE_MOLECULES = 10
+
+SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
+SCRIPT_DIR = srcdir("scripts")
+
+CCS_BAM = config["CCS_BAM"]
+SUBREADS_BAM = config["SUBREADS_BAM"]
+PREFIX = config["PREFIX"]
+
+
+rule all:
+    input: "merge_laa/{}.fastq".format(PREFIX)
+
+
+rule mafft_msa:
+    input: "clustering/{prefix}.fasta"
+    output: "consensus/{prefix}.msa"
+    message: "mafft alignment of cluster sequences"
+    shell: "mafft --auto --quiet {input} > {output}"
+
+
+rule consensus:
+    input: rules.mafft_msa.output
+    output: "consensus/{prefix}.consensus.fasta"
+    message: "generating cluster consensus sequence"
+    shell: "{SCRIPT_DIR}/consensus.py -f {CONSENSUS_FRACTION} "
+           "-s {wildcards.prefix}.consensus {input} > {output}"
+
+
+rule align_to_consensus:
+    input:
+        consensus = rules.consensus.output,
+        reads = "clustering/{prefix}.fasta"
+    output:
+        sam = "align/{prefix}.aligned.sam",
+        bam = "align/{prefix}.aligned.sorted.bam",
+        index = "align/{prefix}.aligned.sorted.bam.bai"
+    message: "aligning cluster sequences to cluster consensus"
+    shell: "ngmlr -r {input.consensus} -q {input.reads} --rg-id foo --rg-sm sm --rg-lb lb > {output.sam} &&"
+           "samtools sort {output.sam} > {output.bam} &&"
+           "samtools index {output.bam}"
+
+
+rule pileup:
+    input:
+        bam = rules.align_to_consensus.output.bam,
+        consensus = rules.consensus.output
+    output:
+        "calls/{prefix}.pileup"
+    message: "generating pileup"
+    shell: "bcftools mpileup -f {input.consensus} {input.bam} > {output}"
+
+
+rule call:
+    input: rules.pileup.output
+    output: "calls/{prefix}.vcf"
+    message: "calling variants"
+    shell: "bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>=50' > {output}"
+
+
+rule phase:
+    input:
+        vcf = rules.call.output,
+        bam = rules.align_to_consensus.output.bam
+    output: "phasing/{prefix}.phased.vcf"
+    message: "phasing cluster"
+    shell:
+        "whatshap phase --indels {input.vcf} {input.bam} > {output}"
+
+
+rule sanitize:
+    input: rules.phase.output
+    output:
+        zip = "phasing/{prefix}.phased.sanitized.vcf.gz",
+        index = "phasing/{prefix}.phased.sanitized.vcf.gz.tbi"
+    message: "sanitizing phased vcf"
+    shell: "{SCRIPT_DIR}/santize_phased_vcf.py {input} | bgzip -c > {output.zip} &&"
+           "tabix {output.zip}"
+
+
+rule haplotag:
+    input:
+        vcf = rules.sanitize.output.zip,
+        bam = rules.align_to_consensus.output.bam
+    output:
+        bam = "phasing/{prefix}.tagged.bam",
+        index = "phasing/{prefix}.tagged.bam.bai"
+    message: "tagging cluster reads"
+    shell: "whatshap haplotag -o {output.bam} {input.vcf} {input.bam} &&"
+           "samtools index {output.bam}"
+
+
+rule whitelist:
+    input: rules.haplotag.output.bam
+    output: dynamic("laa/{prefix}.haplotype{haplotypeid}.whitelist")
+    message: "generating whitelists"
+    shell: "{SCRIPT_DIR}/whitelist.py -p laa/{wildcards.prefix} -m {MIN_HAPLOTYPE_MOLECULES} {input}"
+
+
+rule laa_consensus:
+    input:
+        subreads = SUBREADS_BAM,
+        whitelist = rules.whitelist.output
+    output:
+        "laa/{prefix}.haplotype{haplotypeid}.fastq"
+    params:
+        junk = "laa/{prefix}.haplotype{haplotypeid}.junk.fastq",
+        report_file = "laa/{prefix}.haplotype{haplotypeid}.report.csv",
+        input_report = "laa/{prefix}.haplotype{haplotypeid}.input_report.csv",
+        locus_report = "laa/{prefix}.haplotype{haplotypeid}.locus_report.csv",
+        whitelist_report = "laa/{prefix}.haplotype{haplotypeid}.whitelist_report.csv"
+    message: "generating haplotype consensus"
+    shell: "{SMRTCMD_PATH}/laa -n 1 --ignoreBc --noClustering --noPhasing "
+           "--resultFile {output} "
+           "--junkFile {params.junk} "
+           "--reportFile {params.report_file} "
+           "--inputReportFile {params.input_report} "
+           "--subreadsReportPrefix laa/{wildcards.prefix}.haplotype{wildcards.haplotypeid}.subreads "
+           "--whitelistReportFile {params.whitelist_report} "
+           "--locusReportFile {params.locus_report} "
+           "--whitelist {input.whitelist} {input.subreads}"
+
+
+rule modify_laa_id:
+    input: rules.laa_consensus.output
+    output: "relabel_laa/{prefix}.haplotype{haplotypeid}.renamed.fastq"
+    message: "updating haplotype sequence name"
+    shell: "{SCRIPT_DIR}/label_haplotype_seqs.py -p {wildcards.prefix}.haplotype{wildcards.haplotypeid} {input} > {output}"
+
+
+rule merge_laa:
+    input: dynamic("relabel_laa/{prefix}.haplotype{haplotypeid}.renamed.fastq")
+    output: "merge_laa/{prefix}.fastq"
+    message: "merging cluster haplotype sequences"
+    shell: "cat {input} > {output}"
