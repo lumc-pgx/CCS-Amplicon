@@ -34,7 +34,7 @@ def distance_matrix(sequences):
     
         for j in range(i, len(dists[i])):
             if i != j:
-                target = str(sequences[j].seq)
+                target = str(adjusted_sequences[j].seq)
                 d = edlib.align(query, target, task="distance", mode="NW")["editDistance"]
                 dists[i][j] = d
                 dists[j][i] = d
