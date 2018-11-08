@@ -1,41 +1,26 @@
-PLATE = "plate2"
-BARCODE = "lbc20"
-CCS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/CCS/{}.bam".format(PLATE, BARCODE)
-SUBREADS_BAM = "/exports/humgen/wgallard/pharmacogenomics_pipeline/pugwash/LIMA_2_stage_deflate/{}/preprocessor/consolidated/{}.bam".format(PLATE, BARCODE)
-
-MIN_READ_LENGTH = 6000
-MAX_READ_LENGTH = 7000
-MIN_PASSES = 1
-MIN_QUAL = 0.98
-MAX_HP_LEN = 2
-TSNE_ITERS = 5000
-TSNE_LR = 50
-CLUSTER_SIMILARITY_PERCENTILE = 80
-CLUSTER_INFLATION = 1.4
-CLUSTER_COVERAGE_LIMIT = 500
-
-SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
 SCRIPT_DIR = srcdir("../scripts")
 
 
 rule all:
-    input: "haplotypes/ccs.filtered.fastq"
+    input: "haplotypes/{}.fastq".format(config["PREFIX"])
 
 
 rule filter_ccs_bam:
-    input: CCS_BAM
+    input: config["CCS_BAM"]
     output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
     shell:
-        "bamtools filter -in {input} -out {output} -length '>={MIN_READ_LENGTH}' -length '<={MAX_READ_LENGTH}' "
-        "-tag 'np:>={MIN_PASSES}' -tag 'rq:>={MIN_QUAL}'"
+        "bamtools filter -in {input} -out {output} "
+        "-length '>={config[MIN_READ_LENGTH]}' "
+        "-length '<={config[MAX_READ_LENGTH]}' "
+        "-tag 'np:>={config[MIN_PASSES]}' -tag 'rq:>={config[MIN_QUAL]}'"
 
 
 rule pbindex:
     input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.pbi"
     message: "generating pacbio index for bam"
-    shell: "{SMRTCMD_PATH}/pbindex {input}"
+    shell: "pbindex {input}"
 
 
 rule bam2fasta:
@@ -44,14 +29,14 @@ rule bam2fasta:
         index = rules.pbindex.output
     output: "filtered/{prefix}.fasta"
     message: "converting bam to fasta"
-    shell: "{SMRTCMD_PATH}/bam2fasta -o - {input.bam} > {output}"
+    shell: "bam2fasta -o - {input.bam} > {output}"
 
 
 rule collapse_hp:
     input: rules.bam2fasta.output
     output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
-    shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {MAX_HP_LEN} {input} > {output}"
+    shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {config[MAX_HP_LEN]} {input} > {output}"
 
 
 rule distance_matrix:
@@ -67,7 +52,8 @@ rule embed:
         embeddings = "clustering/{prefix}.embedded.tsv",
         history = "clustering/{prefix}.embedded.log"
     message: "embedding in two dimensions using tSNE"
-    shell: "{SCRIPT_DIR}/embed.py -i {TSNE_ITERS} -lr {TSNE_LR} {input} > {output.embeddings} 2>{output.history}"
+    shell: "{SCRIPT_DIR}/embed.py -i {config[TSNE_ITERS]} -lr {config[TSNE_LR]} "
+           "{input} > {output.embeddings} 2>{output.history}"
 
 
 rule ccs_info:
@@ -83,8 +69,9 @@ rule cluster:
         info = rules.ccs_info.output
     output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
-    shell: "{SCRIPT_DIR}/cluster.py -s {CLUSTER_SIMILARITY_PERCENTILE} -i {CLUSTER_INFLATION} "
-           "-c {CLUSTER_COVERAGE_LIMIT} {input.embeddings} {input.info} > {output}"
+    shell: "{SCRIPT_DIR}/cluster.py -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
+           "-i {config[CLUSTER_INFLATION]} -c {config[CLUSTER_COVERAGE_LIMIT]} "
+           "{input.embeddings} {input.info} > {output}"
 
 
 rule cluster_seqs:
@@ -103,8 +90,11 @@ rule make_haplotypes:
     params: snakefile = srcdir("subworkflow.snake")
     shell: "snakemake -s {params.snakefile} --nolock "
            "--config PREFIX={wildcards.prefix}.cluster{wildcards.clusterid} "
-           "CCS_BAM={CCS_BAM} "
-           "SUBREADS_BAM={SUBREADS_BAM}"
+           "CCS_BAM={config[CCS_BAM]} "
+           "SUBREADS_BAM={config[SUBREADS_BAM]} "
+           "CONSENSUS_FRACTION={config[CONSENSUS_FRACTION]} "
+           "MIN_HAPLOTYPE_MOLECULES={config[MIN_HAPLOTYPE_MOLECULES]} "
+           "MIN_VARIANT_QUAL={config[MIN_VARIANT_QUAL]}"
 
 
 rule merge_haplotype_clusters:

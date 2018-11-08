@@ -1,17 +1,8 @@
-CONSENSUS_FRACTION = 0.51
-MIN_HAPLOTYPE_MOLECULES = 10
-MIN_VARIANT_QUAL = 50
-
-SMRTCMD_PATH = "/usr/local/smrtlink/smrtcmds/bin"
 SCRIPT_DIR = srcdir("../scripts")
-
-CCS_BAM = config["CCS_BAM"]
-SUBREADS_BAM = config["SUBREADS_BAM"]
-PREFIX = config["PREFIX"]
 
 
 rule all:
-    input: "merge_laa/{}.fastq".format(PREFIX)
+    input: "merge_laa/{}.fastq".format(config["PREFIX"])
 
 
 rule mafft_msa:
@@ -25,7 +16,7 @@ rule consensus:
     input: rules.mafft_msa.output
     output: "consensus/{prefix}.consensus.fasta"
     message: "generating cluster consensus sequence"
-    shell: "{SCRIPT_DIR}/consensus.py -f {CONSENSUS_FRACTION} "
+    shell: "{SCRIPT_DIR}/consensus.py -f {config[CONSENSUS_FRACTION]} "
            "-s {wildcards.prefix}.consensus {input} > {output}"
 
 
@@ -57,7 +48,7 @@ rule call:
     input: rules.pileup.output
     output: "calls/{prefix}.vcf"
     message: "calling variants"
-    shell: "bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>={MIN_VARIANT_QUAL}' > {output}"
+    shell: "bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>={config[MIN_VARIANT_QUAL]}' > {output}"
 
 
 rule phase:
@@ -96,12 +87,12 @@ rule whitelist:
     input: rules.haplotag.output.bam
     output: dynamic("laa/{prefix}.haplotype{haplotypeid}.whitelist")
     message: "generating whitelists"
-    shell: "{SCRIPT_DIR}/whitelist.py -p laa/{wildcards.prefix} -m {MIN_HAPLOTYPE_MOLECULES} {input}"
+    shell: "{SCRIPT_DIR}/whitelist.py -p laa/{wildcards.prefix} -m {config[MIN_HAPLOTYPE_MOLECULES]} {input}"
 
 
 rule laa_consensus:
     input:
-        subreads = SUBREADS_BAM,
+        subreads = config["SUBREADS_BAM"],
         whitelist = rules.whitelist.output
     output:
         "laa/{prefix}.haplotype{haplotypeid}.fastq"
@@ -112,7 +103,7 @@ rule laa_consensus:
         locus_report = "laa/{prefix}.haplotype{haplotypeid}.locus_report.csv",
         whitelist_report = "laa/{prefix}.haplotype{haplotypeid}.whitelist_report.csv"
     message: "generating haplotype consensus"
-    shell: "{SMRTCMD_PATH}/laa -n 1 --ignoreBc --noClustering --noPhasing "
+    shell: "laa -n 1 --ignoreBc --noClustering --noPhasing "
            "--resultFile {output} "
            "--junkFile {params.junk} "
            "--reportFile {params.report_file} "
