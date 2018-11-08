@@ -47,8 +47,8 @@ from snakemake import snakemake
               help="Minimum variant qual score required for a variant to be used for phasing")
 @click.argument("ccs_bam", type=click.Path(exists=True))
 @click.argument("subreads_bam", type=click.Path(exists=True))
-def cli_handler(directory, prefix, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual, max_homopolymer,
-                tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation, max_cluster_passes,
+def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
+                max_homopolymer, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation, max_cluster_passes,
                 consensus_fraction, min_haplotype_molecules, min_variant_qual, ccs_bam, subreads_bam,):
     # dict of config values to pass to snakemake
     config = dict(
