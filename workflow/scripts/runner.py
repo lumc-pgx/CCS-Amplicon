@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+import subprocess
 import click
 from snakemake import snakemake
 
@@ -70,11 +71,21 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         SUBREADS_BAM = subreads_bam
     )
 
-    snakemake(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../snakefiles/workflow.snake"),
-        workdir = directory,
-        config = config
-    )
+    config_items = ["{}={}".format(k, v) for k,v in config.items()]
+    snakefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../snakefiles/workflow.snake")
+
+    snake_args = [
+        "snakemake",
+        "--snakefile", snakefile,
+        "--directory", directory,
+        "--config"
+    ] + config_items
+
+    if profile is not None:
+        snake_args += ["--profile", profile]
+
+    subprocess.run(snake_args)
+
 
 if __name__ == "__main__":
     cli_handler()
