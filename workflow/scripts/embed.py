@@ -15,12 +15,14 @@ import click
               help="maximum number of tSNE iterations")
 @click.option("--learning_rate", "-lr", type=int, default=50,
               help="tSNE learning rate")
+@click.option("--seed", "-s", type=int, default=42,
+              help="random seed to ensure reproducability")
 @click.argument("distance_matrix", type=click.Path(exists=True))
-def cli_handler(distance_matrix, iterations, learning_rate):
+def cli_handler(iterations, learning_rate, seed, distance_matrix):
     distances = pd.read_csv(distance_matrix, sep="\t", header=None)
     tsne=TSNE(n_components=2, metric="precomputed", 
           n_iter=iterations, learning_rate=learning_rate, 
-          method="exact", verbose=2)
+          method="exact", verbose=2, random_state=seed)
 
     old_stdout = sys.stdout
     sys.stdout = sys.stderr
