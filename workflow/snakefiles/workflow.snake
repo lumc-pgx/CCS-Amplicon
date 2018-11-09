@@ -13,7 +13,6 @@ rule filter_ccs_bam:
     input: config["CCS_BAM"]
     output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
-    group: "clustering"
     shell:
         "bamtools filter -in {input} -out {output} "
         "-length '>={config[MIN_READ_LENGTH]}' "
@@ -25,7 +24,6 @@ rule pbindex:
     input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.pbi"
     message: "generating pacbio index for bam"
-    group: "clustering"
     shell: "pbindex {input}"
 
 
@@ -35,7 +33,6 @@ rule bam2fasta:
         index = rules.pbindex.output
     output: "filtered/{prefix}.fasta"
     message: "converting bam to fasta"
-    group: "clustering"
     shell: "bam2fasta -o - {input.bam} > {output}"
 
 
@@ -43,7 +40,6 @@ rule collapse_hp:
     input: rules.bam2fasta.output
     output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
-    group: "clustering"
     shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {config[MAX_HP_LEN]} {input} > {output}"
 
 
@@ -51,7 +47,6 @@ rule distance_matrix:
     input: rules.collapse_hp.output
     output: "clustering/{prefix}.dists.tsv"
     message: "creating distance matrix"
-    group: "clustering"
     shell: "{SCRIPT_DIR}/distance_matrix.py {input} > {output}"
 
 
@@ -61,7 +56,6 @@ rule embed:
         embeddings = "clustering/{prefix}.embedded.tsv",
         history = "clustering/{prefix}.embedded.log"
     message: "embedding in two dimensions using tSNE"
-    group: "clustering"
     shell: "{SCRIPT_DIR}/embed.py -i {config[TSNE_ITERS]} -lr {config[TSNE_LR]} "
            "{input} > {output.embeddings} 2>{output.history}"
 
@@ -70,7 +64,6 @@ rule ccs_info:
     input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.info"
     message: "generating summary information for CCS sequences"
-    group: "clustering"
     shell: "{SCRIPT_DIR}/baminfo.py {input} > {output}"
 
 
@@ -80,7 +73,6 @@ rule cluster:
         info = rules.ccs_info.output
     output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
-    group: "clustering"
     shell: "{SCRIPT_DIR}/cluster.py -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
            "-i {config[CLUSTER_INFLATION]} -c {config[CLUSTER_COVERAGE_LIMIT]} "
            "{input.embeddings} {input.info} > {output}"
@@ -92,7 +84,6 @@ rule cluster_seqs:
         clusters = rules.cluster.output
     output: dynamic("clustering/{prefix}.cluster{clusterid}.fasta")
     message: "creating per-cluster sequence files"
-    group: "clustering"
     shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
 
 
