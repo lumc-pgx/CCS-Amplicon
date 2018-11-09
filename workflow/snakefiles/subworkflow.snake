@@ -9,13 +9,15 @@ rule mafft_msa:
     input: "clustering/{prefix}.fasta"
     output: "consensus/{prefix}.msa"
     message: "mafft alignment of cluster sequences"
-    shell: "mafft --auto --quiet {input} > {output}"
+    group: "phasing"
+    shell: "mafft --auto --quiet --thread 1 {input} > {output}"
 
 
 rule consensus:
     input: rules.mafft_msa.output
     output: "consensus/{prefix}.consensus.fasta"
     message: "generating cluster consensus sequence"
+    group: "phasing"
     shell: "{SCRIPT_DIR}/consensus.py -f {config[CONSENSUS_FRACTION]} "
            "-s {wildcards.prefix}.consensus {input} > {output}"
 
@@ -29,6 +31,7 @@ rule align_to_consensus:
         bam = "align/{prefix}.aligned.sorted.bam",
         index = "align/{prefix}.aligned.sorted.bam.bai"
     message: "aligning cluster sequences to cluster consensus"
+    group: "phasing"
     shell: "ngmlr -r {input.consensus} -q {input.reads} --rg-id foo --rg-sm sm --rg-lb lb > {output.sam} &&"
            "samtools sort {output.sam} > {output.bam} &&"
            "samtools index {output.bam}"

@@ -14,7 +14,7 @@ from snakemake import snakemake
                    "If directory is omitted, output will be written to the current directory")
 @click.option("--prefix", "-p", type=str, default="ccs_amplicon",
               help="Prefix to use for output file names")
-@click.option("--profile", "-po", type=str,
+@click.option("--profile", "-po", type=str, default="",
               help="The name of the snakemake profile to use when running the workflow."
                    "Use this profile to control how the workflow is run on your specific compute architecture."
                    "See https://snakemake.readthedocs.io/en/stable/executable.html?highlight=profile for details")
@@ -68,7 +68,8 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         MIN_HAPLOTYPE_MOLECULES = min_haplotype_molecules,
         MIN_VARIANT_QUAL = min_variant_qual,
         CCS_BAM = ccs_bam,
-        SUBREADS_BAM = subreads_bam
+        SUBREADS_BAM = subreads_bam,
+        PROFILE = profile
     )
 
     config_items = ["{}={}".format(k, v) for k,v in config.items()]
@@ -81,7 +82,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         "--config"
     ] + config_items
 
-    if profile is not None:
+    if profile != "":
         snake_args += ["--profile", profile]
 
     subprocess.run(snake_args)
