@@ -6,7 +6,9 @@ if SUBWORKFLOW_PROFILE != "":
 
 
 rule all:
-    input: "haplotypes/{}.fastq".format(config["PREFIX"])
+    input:
+        "haplotypes/{}.fastq".format(config["PREFIX"]),
+        "clustering/{}.clustering.html".format(config["PREFIX"])
 
 
 rule filter_ccs_bam:
@@ -76,6 +78,18 @@ rule cluster:
     shell: "{SCRIPT_DIR}/cluster.py -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
            "-i {config[CLUSTER_INFLATION]} -c {config[CLUSTER_COVERAGE_LIMIT]} "
            "{input.embeddings} {input.info} > {output}"
+
+
+rule cluster_report:
+    input:
+        embeddings = rules.embed.output.embeddings,
+        clusters = rules.cluster.output,
+        info = rules.ccs_info.output
+    output:
+        "clustering/{prefix}.clustering.html"
+    message:
+        "visualizing clusters"
+    shell: "{SCRIPT_DIR}/cluster_view.py {input.clusters} {input.embeddings} {input.info} {output}"
 
 
 rule cluster_seqs:
