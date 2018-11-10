@@ -1,0 +1,72 @@
+#! /usr/bin/env python
+import pandas as pd
+import json
+
+from bokeh.plotting import figure, ColumnDataSource
+from bokeh.palettes import viridis, magma, plasma
+from bokeh.transform import factor_cmap
+from bokeh.io import output_file, save
+
+import click
+
+
+def make_plot(clusters, embeddings, info, title):
+    data = embeddings.copy()
+    
+    embedded_clusters = [-1 for _ in range(data.shape[0])]
+
+    for cluster in clusters:
+        for member in cluster["members"]:
+            embedded_clusters[member] = cluster["cluster"]
+
+    data["cluster"] = embedded_clusters
+
+    datasource = ColumnDataSource({
+        "x": data[0], 
+        "y": data[1],
+        "passes": info["np"],
+        "len": info["len"],
+        "qual": info["rq"],
+        "cluster": [str(c) for c in data["cluster"]]
+    })
+
+    TOOLTIPS = [
+        ("Passes", "@passes"),
+        ("length", "@len"),
+        ("qual", "@qual"),
+        ("index", "$index")
+    ]
+
+    factors = [str(i) for i in set(data["cluster"])]
+
+    p=figure(title=title, tooltips=TOOLTIPS)
+    p.circle(x="x", y="y", source=datasource, size="passes", color=factor_cmap('cluster', palette=viridis(max(2, len(factors))), factors=factors))
+
+    return p
+
+
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+    ),
+    short_help="Generate an html plot of the clustering"    
+)
+@click.option("--title", "-t", type=str, default="Clusters",
+              help="Title for the plot")
+@click.argument("cluster_file", type=click.Path(exists=True))
+@click.argument("embedding_file", type=click.Path(exists=True))
+@click.argument("info_file", type=click.Path(exists=True))
+@click.argument("plot_file", type=click.Path())
+def cli_handler(title, cluster_file, embedding_file, info_file, plot_file):
+    with open(cluster_file, "r") as infile:
+        clusters = json.load(infile)
+
+    embeddings = pd.read_csv(embedding_file, sep="\t", header=None)
+    bam_info = pd.read_csv(info_file, sep="\t")
+
+    output_file(plot_file, title="Cluster report", mode="inline")
+    figure = make_plot(clusters, embeddings, bam_info, title)
+    save(figure) 
+
+
+if __name__ == '__main__':
+    cli_handler()
