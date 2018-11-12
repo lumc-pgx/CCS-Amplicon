@@ -24,6 +24,9 @@ def distance_matrix(sequences):
     """
     dists = np.array([np.array([0 for _ in range(len(sequences))]) for _ in range(len(sequences))])
     
+    if dists.shape[0] == 0:
+        return dists
+
     base_seq = sequences[0]
     adjusted_sequences = []
     for s in tqdm(sequences, desc="{:<10}".format("prescan")):
@@ -50,7 +53,7 @@ def distance_matrix(sequences):
 def cli_handler(input_fasta):
     with open(input_fasta, "r") as infile:
         sequences = [record for record in SeqIO.parse(infile, "fasta")]
-    
+   
     distances = distance_matrix(sequences)
     for d in distances:
         print("\t".join([str(x) for x in d]))
