@@ -19,7 +19,12 @@ import click
               help="random seed to ensure reproducability")
 @click.argument("distance_matrix", type=click.Path(exists=True))
 def cli_handler(iterations, learning_rate, seed, distance_matrix):
-    distances = pd.read_csv(distance_matrix, sep="\t", header=None)
+    try:
+        distances = pd.read_csv(distance_matrix, sep="\t", header=None)
+    except pd.errors.EmptyDataError:
+        sys.stderr.write("Empty distance matrix")
+        return
+    
     tsne=TSNE(n_components=2, metric="precomputed", 
           n_iter=iterations, learning_rate=learning_rate, 
           method="exact", verbose=2, random_state=seed)

@@ -83,8 +83,13 @@ def filter_cluster_coverage(clusters, info, max_coverage):
 @click.argument("embeddings", type=click.Path(exists=True))
 @click.argument("sequence_info", type=click.Path(exists=True))
 def cli_handler(similarity_threshold, inflation, coverage, embeddings, sequence_info):
-    embedded = pd.read_csv(embeddings, sep="\t", header=None).values
-    info = pd.read_csv(sequence_info, sep="\t")
+    try:
+        embedded = pd.read_csv(embeddings, sep="\t", header=None).values
+        info = pd.read_csv(sequence_info, sep="\t")
+    except pd.errors.EmptyDataError:
+        print(json.dumps([]))
+        return
+
     clusters = find_clusters(embedded, similarity_threshold, inflation)
     clusters = [sort_cluster_elements(c, embedded, info) for c in clusters]
     clusters = filter_cluster_coverage(clusters, info, coverage)
