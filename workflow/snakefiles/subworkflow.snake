@@ -9,7 +9,7 @@ rule mafft_msa:
     input: "clustering/{prefix}.fasta"
     output: "consensus/{prefix}.msa"
     message: "mafft alignment of cluster sequences"
-    shell: "mafft --auto --quiet --thread 1 {input} > {output}"
+    shell: "mafft --auto --quiet --thread 1 --adjustdirection {input} > {output}"
 
 
 rule consensus:
