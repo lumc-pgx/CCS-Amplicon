@@ -75,7 +75,7 @@ rule cluster:
         info = rules.ccs_info.output
     output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
-    shell: "{SCRIPT_DIR}/cluster.py -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
+    shell: "export OMP_NUM_THREADS=1 && {SCRIPT_DIR}/cluster.py -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
            "-i {config[CLUSTER_INFLATION]} -c {config[CLUSTER_COVERAGE_LIMIT]} "
            "{input.embeddings} {input.info} > {output}"
 
