@@ -35,7 +35,7 @@ rule bam2fasta:
         index = rules.pbindex.output
     output: "filtered/{prefix}.fasta"
     message: "converting bam to fasta"
-    shell: "bam2fasta -o - {input.bam} > {output}"
+    shell: "bam2fasta -o filtered/{wildcards.prefix} -u {input.bam}"
 
 
 rule collapse_hp:
