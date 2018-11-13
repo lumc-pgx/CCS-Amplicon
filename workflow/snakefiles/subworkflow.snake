@@ -1,4 +1,4 @@
-SCRIPT_DIR = srcdir("../scripts")
+SCRIPT_DIR = srcdir("../ccs_amplicon")
 
 
 rule all:
