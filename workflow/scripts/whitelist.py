@@ -35,10 +35,14 @@ def cli_handler(prefix, min_molecules, bam_file):
 
     tagged_reads = {haplotype: molecules for haplotype, molecules in tagged_reads.items() if len(molecules) >= min_molecules}
 
-    for haplotype in tagged_reads:
-        with open("{}haplotype{}.whitelist".format(prefix, haplotype), "w") as whitelist:
-            for molecule in tagged_reads[haplotype]:
-                print(molecule, file=whitelist)
+    if len(tagged_reads) == 0:
+        with open("{}haplotype0.whitelist".format(prefix), "w") as whitelist:
+            pass
+    else:
+        for haplotype in tagged_reads:
+            with open("{}haplotype{}.whitelist".format(prefix, haplotype), "w") as whitelist:
+                for molecule in tagged_reads[haplotype]:
+                    print(molecule, file=whitelist)
 
 if __name__ == '__main__':
     cli_handler()

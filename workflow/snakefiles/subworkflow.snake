@@ -29,9 +29,17 @@ rule align_to_consensus:
         bam = "align/{prefix}.aligned.sorted.bam",
         index = "align/{prefix}.aligned.sorted.bam.bai"
     message: "aligning cluster sequences to cluster consensus"
-    shell: "ngmlr -r {input.consensus} -q {input.reads} --rg-id foo --rg-sm sm --rg-lb lb > {output.sam} &&"
-           "samtools sort {output.sam} > {output.bam} &&"
-           "samtools index {output.bam}"
+    shell: """
+        if [ -s "{input.consensus}" ] && [ -s "{input.reads}" ]
+        then
+            ngmlr -r {input.consensus} -q {input.reads} --rg-id foo --rg-sm sm --rg-lb lb > {output.sam}
+        else
+            echo "creating placeholder sam file due to empty input"
+            touch {output.sam}
+        fi
+        samtools sort {output.sam} > {output.bam}
+        samtools index {output.bam}
+    """
 
 
 rule pileup:
@@ -41,14 +49,30 @@ rule pileup:
     output:
         "calls/{prefix}.pileup"
     message: "generating pileup"
-    shell: "bcftools mpileup -f {input.consensus} {input.bam} > {output}"
+    shell: """
+        if [ -s "{input.bam}" ] && [ -s "{input.consensus}" ]
+        then
+            bcftools mpileup -f {input.consensus} {input.bam} > {output}
+        else
+            echo "creating placeholder pileup due to empty input"
+            touch {output}
+        fi
+    """
 
 
 rule call:
     input: rules.pileup.output
     output: "calls/{prefix}.vcf"
     message: "calling variants"
-    shell: "bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>={config[MIN_VARIANT_QUAL]}' > {output}"
+    shell: """
+        if [ -s "{input}" ]
+        then
+            bcftools call -mv -Ob {input} | bcftools view -i 'QUAL>={config[MIN_VARIANT_QUAL]}' > {output}
+        else
+            echo "creating placeholder vcf due to empty input"
+            touch {output}
+        fi
+    """
 
 
 rule phase:
@@ -57,8 +81,15 @@ rule phase:
         bam = rules.align_to_consensus.output.bam
     output: "phasing/{prefix}.phased.vcf"
     message: "phasing cluster"
-    shell:
-        "whatshap phase --indels {input.vcf} {input.bam} > {output}"
+    shell: """
+        if [ -s "{input.vcf}" ] && [ -s "{input.bam}" ]
+        then
+            whatshap phase --indels {input.vcf} {input.bam} > {output}
+        else
+            echo "creating placeholder phased vcf due to empty input"
+            touch {output}
+        fi
+    """
 
 
 rule sanitize:
@@ -67,8 +98,17 @@ rule sanitize:
         zip = "phasing/{prefix}.phased.sanitized.vcf.gz",
         index = "phasing/{prefix}.phased.sanitized.vcf.gz.tbi"
     message: "sanitizing phased vcf"
-    shell: "{SCRIPT_DIR}/santize_phased_vcf.py {input} | bgzip -c > {output.zip} &&"
-           "tabix {output.zip}"
+    shell: """
+        if [ -s "{input}" ]
+        then
+            {SCRIPT_DIR}/santize_phased_vcf.py {input} | bgzip -c > {output.zip}
+            tabix {output.zip}
+        else
+            echo "creating placeholder bcf due to empty input"
+            touch {output.zip}
+            touch {output.index}
+        fi
+    """
 
 
 rule haplotag:
@@ -79,8 +119,17 @@ rule haplotag:
         bam = "phasing/{prefix}.tagged.bam",
         index = "phasing/{prefix}.tagged.bam.bai"
     message: "tagging cluster reads"
-    shell: "whatshap haplotag -o {output.bam} {input.vcf} {input.bam} &&"
-           "samtools index {output.bam}"
+    shell: """
+        if [ -s "{input.vcf}" ] && [ -s "{input.bam}" ]
+        then
+            whatshap haplotag -o {output.bam} {input.vcf} {input.bam}
+            samtools index {output.bam}
+        else
+            echo "creating placeholder tagged bam due to empty input"
+            touch {output.bam}
+            touch {output.index}
+        fi
+    """
 
 
 rule whitelist:
