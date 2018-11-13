@@ -3,9 +3,10 @@ import pandas as pd
 import json
 
 from bokeh.plotting import figure, ColumnDataSource
-from bokeh.palettes import viridis, magma, plasma
+from bokeh.palettes import viridis
 from bokeh.transform import factor_cmap
 from bokeh.io import output_file, save
+from bokeh.models.widgets import Div
 
 import click
 
@@ -60,11 +61,19 @@ def cli_handler(title, cluster_file, embedding_file, info_file, plot_file):
     with open(cluster_file, "r") as infile:
         clusters = json.load(infile)
 
-    embeddings = pd.read_csv(embedding_file, sep="\t", header=None)
-    bam_info = pd.read_csv(info_file, sep="\t")
+    try:
+        embeddings = pd.read_csv(embedding_file, sep="\t", header=None)
+        bam_info = pd.read_csv(info_file, sep="\t")
+    except pd.errors.EmptyDataError:
+        pass
 
     output_file(plot_file, title="Cluster report", mode="inline")
-    figure = make_plot(clusters, embeddings, bam_info, title)
+
+    if len(clusters) > 0:
+        figure = make_plot(clusters, embeddings, bam_info, title)
+    else:
+        figure = Div(text="No Data")
+
     save(figure) 
 
 

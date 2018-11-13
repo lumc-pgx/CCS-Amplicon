@@ -21,6 +21,11 @@ def cli_handler(prefix, sequence_fasta, clusters_json):
     if prefix != "":
         prefix = prefix + "."
 
+    if len(clusters) == 0:
+        with open("{}cluster0.fasta".format(prefix, 0), "w") as blankfile:
+            return
+
+
     output_files = [open("{}cluster{}.fasta".format(prefix, cluster["cluster"]), "w") for cluster in clusters]
 
     for i, record in enumerate(SeqIO.parse(sequence_fasta, "fasta")):

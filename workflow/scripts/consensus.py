@@ -16,7 +16,11 @@ from Bio.Align import AlignInfo
               help="fasta sequence id to use for consensus sequence")
 @click.argument("msa_fasta", type=click.Path(exists=True))
 def cli_handler(fraction, seqid, msa_fasta):
-    msa = AlignIO.read(msa_fasta, "fasta")
+    try:
+        msa = AlignIO.read(msa_fasta, "fasta")
+    except ValueError:
+        return
+
     summary = AlignInfo.SummaryInfo(msa)
     consensus = str(summary.gap_consensus(fraction, require_multiple=True, ambiguous='')).replace("-", "")
 
