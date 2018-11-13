@@ -35,12 +35,12 @@ setup(
         "pandas",
         "bokeh",
         "pysam",
-        "click",
-        "markov_clustering",
+        "click>=7.0",
+        "markov_clustering>=0.0.5.dev0",
         "biopython",
         "edlib",
         "tqdm",
-        "snakemake"
+        "snakemake>=5.0.0"
     ],
     entry_points={
         "console_scripts": [
