@@ -1,1 +1,1 @@
-include snakefiles/*.snake
+include ccs_amplicon/snakefiles/*.snake
