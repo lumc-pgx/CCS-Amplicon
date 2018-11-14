@@ -73,7 +73,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
     )
 
     config_items = ["{}={}".format(k, v) for k,v in config.items()]
-    snakefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../snakefiles/workflow.snake")
+    snakefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snakefiles/workflow.snake")
 
     snake_args = [
         "snakemake",
