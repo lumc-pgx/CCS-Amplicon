@@ -42,14 +42,14 @@ rule collapse_hp:
     input: rules.bam2fasta.output
     output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
-    shell: "{SCRIPT_DIR}/collapse_homopolymers.py -s {config[MAX_HP_LEN]} {input} > {output}"
+    shell: "ccs_amplicon.collapse -s {config[MAX_HP_LEN]} {input} > {output}"
 
 
 rule distance_matrix:
     input: rules.collapse_hp.output
     output: "clustering/{prefix}.dists.tsv"
     message: "creating distance matrix"
-    shell: "{SCRIPT_DIR}/distance_matrix.py {input} > {output}"
+    shell: "ccs_amplicon.distance {input} > {output}"
 
 
 rule embed:
@@ -58,7 +58,7 @@ rule embed:
         embeddings = "clustering/{prefix}.embedded.tsv",
         history = "clustering/{prefix}.embedded.log"
     message: "embedding in two dimensions using tSNE"
-    shell: "{SCRIPT_DIR}/embed.py -i {config[TSNE_ITERS]} -lr {config[TSNE_LR]} "
+    shell: "ccs_amplicon.embed -i {config[TSNE_ITERS]} -lr {config[TSNE_LR]} "
            "{input} > {output.embeddings} 2>{output.history}"
 
 
@@ -66,7 +66,7 @@ rule ccs_info:
     input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.info"
     message: "generating summary information for CCS sequences"
-    shell: "{SCRIPT_DIR}/baminfo.py {input} > {output}"
+    shell: "ccs_amplicon.baminfo {input} > {output}"
 
 
 rule cluster:
@@ -75,7 +75,7 @@ rule cluster:
         info = rules.ccs_info.output
     output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
-    shell: "export OMP_NUM_THREADS=1 && {SCRIPT_DIR}/cluster.py -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
+    shell: "export OMP_NUM_THREADS=1 && ccs_amplicon.clusters -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
            "-i {config[CLUSTER_INFLATION]} -c {config[CLUSTER_COVERAGE_LIMIT]} "
            "{input.embeddings} {input.info} > {output}"
 
@@ -89,7 +89,7 @@ rule cluster_report:
         "clustering/{prefix}.clustering.html"
     message:
         "visualizing clusters"
-    shell: "{SCRIPT_DIR}/cluster_view.py {input.clusters} {input.embeddings} {input.info} {output}"
+    shell: "ccs_amplicon.clusterplot {input.clusters} {input.embeddings} {input.info} {output}"
 
 
 rule cluster_seqs:
@@ -98,7 +98,7 @@ rule cluster_seqs:
         clusters = rules.cluster.output
     output: dynamic("clustering/{prefix}.cluster{clusterid}.fasta")
     message: "creating per-cluster sequence files"
-    shell: "{SCRIPT_DIR}/seqs_from_clusters.py -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
+    shell: "ccs_amplicon.seqs_from_cluster -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
 
 
 rule make_haplotypes:

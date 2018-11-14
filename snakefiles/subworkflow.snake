@@ -1,6 +1,3 @@
-SCRIPT_DIR = srcdir("../ccs_amplicon")
-
-
 rule all:
     input: "merge_laa/{}.fastq".format(config["PREFIX"])
 
@@ -16,7 +13,7 @@ rule consensus:
     input: rules.mafft_msa.output
     output: "consensus/{prefix}.consensus.fasta"
     message: "generating cluster consensus sequence"
-    shell: "{SCRIPT_DIR}/consensus.py -f {config[CONSENSUS_FRACTION]} "
+    shell: "ccs_amplicon.consensus -f {config[CONSENSUS_FRACTION]} "
            "-s {wildcards.prefix}.consensus {input} > {output}"
 
 
@@ -101,7 +98,7 @@ rule sanitize:
     shell: """
         if [ -s "{input}" ]
         then
-            {SCRIPT_DIR}/santize_phased_vcf.py {input} | bgzip -c > {output.zip}
+            ccs_amplicon.sanitize_phase {input} | bgzip -c > {output.zip}
             tabix {output.zip}
         else
             echo "creating placeholder bcf due to empty input"
@@ -136,7 +133,7 @@ rule whitelist:
     input: rules.haplotag.output.bam
     output: dynamic("laa/{prefix}.haplotype{haplotypeid}.whitelist")
     message: "generating whitelists"
-    shell: "{SCRIPT_DIR}/whitelist.py -p laa/{wildcards.prefix} -m {config[MIN_HAPLOTYPE_MOLECULES]} {input}"
+    shell: "ccs_amplicon.whitelist -p laa/{wildcards.prefix} -m {config[MIN_HAPLOTYPE_MOLECULES]} {input}"
 
 
 rule laa_consensus:
@@ -167,7 +164,7 @@ rule modify_laa_id:
     input: rules.laa_consensus.output
     output: "relabel_laa/{prefix}.haplotype{haplotypeid}.renamed.fastq"
     message: "updating haplotype sequence name"
-    shell: "{SCRIPT_DIR}/label_haplotype_seqs.py -p {wildcards.prefix}.haplotype{wildcards.haplotypeid} {input} > {output}"
+    shell: "ccs_amplicon.label -p {wildcards.prefix}.haplotype{wildcards.haplotypeid} {input} > {output}"
 
 
 rule merge_laa:
