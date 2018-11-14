@@ -67,8 +67,8 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         CONSENSUS_FRACTION = consensus_fraction,
         MIN_HAPLOTYPE_MOLECULES = min_haplotype_molecules,
         MIN_VARIANT_QUAL = min_variant_qual,
-        CCS_BAM = ccs_bam,
-        SUBREADS_BAM = subreads_bam,
+        CCS_BAM = os.path.abspath(ccs_bam),
+        SUBREADS_BAM = os.path.abspath(subreads_bam),
         PROFILE = profile
     )
 
