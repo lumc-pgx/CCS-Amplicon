@@ -53,7 +53,7 @@ setup(
             "ccs_amplicon.embed = ccs_amplicon.embed:cli_handler",
             "ccs_amplicon.label = ccs_amplicon.label_haplotype_seqs:cli_handler",
             "ccs_amplicon.sanitize_phase = ccs_amplicon.sanitize_phased_vcf:cli_handler",
-            "ccs_amplicon.seqs_from_cluster = ccs_amplicon.seqs_from_cluster:cli_handler",
+            "ccs_amplicon.seqs_from_clusters = ccs_amplicon.seqs_from_clusters:cli_handler",
             "ccs_amplicon.whitelist = ccs_amplicon.whitelist:cli_handler",
             "ccs_amplicon.clusterplot = ccs_amplicon.cluster_view:cli_handler"
         ]

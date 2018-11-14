@@ -96,7 +96,7 @@ rule cluster_seqs:
         clusters = rules.cluster.output
     output: dynamic("clustering/{prefix}.cluster{clusterid}.fasta")
     message: "creating per-cluster sequence files"
-    shell: "ccs_amplicon.seqs_from_cluster -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
+    shell: "ccs_amplicon.seqs_from_clusters -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
 
 
 rule make_haplotypes:
