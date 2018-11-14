@@ -1,5 +1,3 @@
-SCRIPT_DIR = srcdir("../ccs_amplicon")
-
 SUBWORKFLOW_PROFILE = config.get("PROFILE", "")
 if SUBWORKFLOW_PROFILE != "":
     SUBWORKFLOW_PROFILE = "--profile " + SUBWORKFLOW_PROFILE
