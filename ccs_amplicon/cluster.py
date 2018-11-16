@@ -57,18 +57,6 @@ def cluster_coverage(cluster, info):
     return int(sum([info.iloc[c]["np"] for c in cluster]))
 
 
-def get_coverage(clusters, info):
-    return sum([sum([cluster_coverage(cluster, info)]) for cluster in clusters])
-
-
-def filter_cluster_coverage(clusters, info, max_coverage):
-    total_coverage = get_coverage(clusters, info)
-    while total_coverage > max_coverage:
-        clusters = [cluster[:-1] for cluster in clusters]
-        total_coverage = get_coverage(clusters, info)
-    return clusters
-
-
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
     ),
@@ -78,11 +66,9 @@ def filter_cluster_coverage(clusters, info, max_coverage):
               help="minimum similarity percentile")
 @click.option("--inflation", "-i", type=float, default=1.4,
               help="MCL cluster inflation")
-@click.option("--coverage", "-c", type=int, default=500,
-              help="limit the total coverage")
 @click.argument("embeddings", type=click.Path(exists=True))
 @click.argument("sequence_info", type=click.Path(exists=True))
-def cli_handler(similarity_threshold, inflation, coverage, embeddings, sequence_info):
+def cli_handler(similarity_threshold, inflation, embeddings, sequence_info):
     try:
         embedded = pd.read_csv(embeddings, sep="\t", header=None).values
         info = pd.read_csv(sequence_info, sep="\t")
@@ -92,7 +78,6 @@ def cli_handler(similarity_threshold, inflation, coverage, embeddings, sequence_
 
     clusters = find_clusters(embedded, similarity_threshold, inflation)
     clusters = [sort_cluster_elements(c, embedded, info) for c in clusters]
-    clusters = filter_cluster_coverage(clusters, info, coverage)
 
     print(
         json.dumps(
