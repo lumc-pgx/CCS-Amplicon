@@ -92,12 +92,14 @@ rule cluster_report:
     input:
         embeddings = rules.embed.output.embeddings,
         clusters = rules.cluster.output,
+        filtered_clusters = rules.filter_clusters.output,
         info = rules.ccs_info.output
     output:
         "clustering/{prefix}.clustering.html"
     message:
         "visualizing clusters"
-    shell: "ccs_amplicon.clusterplot {input.clusters} {input.embeddings} {input.info} {output}"
+    shell: "ccs_amplicon.clusterplot -t {wildcards.prefix} "
+           "{input.clusters} {input.filtered_clusters} {input.embeddings} {input.info} {output}"
 
 
 rule cluster_seqs:
