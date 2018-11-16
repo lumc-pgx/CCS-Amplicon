@@ -38,8 +38,10 @@ from snakemake import snakemake
 @click.option("--cluster-inflation", type=click.FloatRange(0, None), default=1.4,
               help="Markov clustering inflation parameter."
                    "Higer values result in more clusters")
-@click.option("--max-cluster-passes", type=click.IntRange(1, None), default=500,
-              help="Limit the number of sequences output by the cluster step")
+@click.option("--cluster-size-threshold", type=click.FloatRange(0.0, 1.0), default=0.2,
+              help="fraction of molecules relative to the largest cluster required for a cluster to be included")
+@click.option("--cluster-fraction", type=click.FloatRange(0.0, 1.0), default=0.8,
+              help="fraction of molecules to retain per-cluster")
 @click.option("--consensus-fraction", type=click.FloatRange(0.0, 1.0), default=0.51,
               help="Frequency of nucleotide at a given position required for rough consensus calling")
 @click.option("--min-haplotype-molecules", type=click.IntRange(1, None), default=10,
@@ -49,8 +51,9 @@ from snakemake import snakemake
 @click.argument("ccs_bam", type=click.Path(exists=True))
 @click.argument("subreads_bam", type=click.Path(exists=True))
 def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
-                max_homopolymer, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation, max_cluster_passes,
-                consensus_fraction, min_haplotype_molecules, min_variant_qual, ccs_bam, subreads_bam,):
+                max_homopolymer, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
+                cluster_size_threshold, cluster_fraction, consensus_fraction, min_haplotype_molecules,
+                min_variant_qual, ccs_bam, subreads_bam,):
     # dict of config values to pass to snakemake
     config = dict(
         PREFIX = prefix,
@@ -63,7 +66,8 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         TSNE_LR = tsne_rate,
         CLUSTER_SIMILARITY_PERCENTILE = cluster_percentile,
         CLUSTER_INFLATION = cluster_inflation,
-        CLUSTER_COVERAGE_LIMIT = max_cluster_passes,
+        CLUSTER_SIZE_THRESHOLD=cluster_size_threshold,
+        CLUSTER_FRACTION=cluster_fraction,
         CONSENSUS_FRACTION = consensus_fraction,
         MIN_HAPLOTYPE_MOLECULES = min_haplotype_molecules,
         MIN_VARIANT_QUAL = min_variant_qual,

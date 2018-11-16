@@ -74,8 +74,16 @@ rule cluster:
     output: "clustering/{prefix}.clusters.json"
     message: "identifying clusters"
     shell: "export OMP_NUM_THREADS=1 && ccs_amplicon.clusters -s {config[CLUSTER_SIMILARITY_PERCENTILE]} "
-           "-i {config[CLUSTER_INFLATION]} -c {config[CLUSTER_COVERAGE_LIMIT]} "
+           "-i {config[CLUSTER_INFLATION]} "
            "{input.embeddings} {input.info} > {output}"
+
+rule filter_clusters:
+    input:
+        clusters = rules.cluster.output,
+        info = rules.ccs_info.output
+    output: "clustering/{prefix}.clusters.filtered.json"
+    message: "filtering clusters"
+    shell: "ccs_amplicon.filter_clusters -i {config[CLUSTER_SIZE_THRESHOLD]} -f {config[CLUSTER_FRACTION]} > output"
 
 
 rule cluster_report:
@@ -93,7 +101,7 @@ rule cluster_report:
 rule cluster_seqs:
     input:
         seqs = rules.collapse_hp.output,
-        clusters = rules.cluster.output
+        clusters = rules.filter_clusters.output
     output: dynamic("clustering/{prefix}.cluster{clusterid}.fasta")
     message: "creating per-cluster sequence files"
     shell: "ccs_amplicon.seqs_from_clusters -p clustering/{wildcards.prefix} {input.seqs} {input.clusters}"
