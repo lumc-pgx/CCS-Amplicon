@@ -50,7 +50,7 @@ def make_plot(clusters, filtered_clusters, embeddings, info, title):
     p=figure(title=title, tooltips=TOOLTIPS)
     c = p.circle(x="x", y="y", source=datasource1, size="passes",
                  color=factor_cmap('cluster', palette=viridis(max(2, len(factors))), factors=factors),
-                 alpha=0.5, line_alpha="filter")
+                 alpha=0.5, line_alpha="filter", legend="cluster")
 
     return p
 
