@@ -80,7 +80,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
     snakefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snakefiles/workflow.snake")
 
     snake_args = [
-        "snakemake", "--nolock",
+        "snakemake", "--rerun-incomplete",
         "--snakefile", snakefile,
         "--directory", directory,
         "--config"
