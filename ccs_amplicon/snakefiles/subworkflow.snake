@@ -149,15 +149,26 @@ rule laa_consensus:
         locus_report = "laa/{prefix}.haplotype{haplotypeid}.locus_report.csv",
         whitelist_report = "laa/{prefix}.haplotype{haplotypeid}.whitelist_report.csv"
     message: "generating haplotype consensus"
-    shell: "laa -n 1 --ignoreBc --noClustering --noPhasing "
-           "--resultFile {output} "
-           "--junkFile {params.junk} "
-           "--reportFile {params.report_file} "
-           "--inputReportFile {params.input_report} "
-           "--subreadsReportPrefix laa/{wildcards.prefix}.haplotype{wildcards.haplotypeid}.subreads "
-           "--whitelistReportFile {params.whitelist_report} "
-           "--locusReportFile {params.locus_report} "
-           "--whitelist {input.whitelist} {input.subreads}"
+    shell: """
+        if [ -s "{input.whitelist}" ] && [ -s "{input.subreads}" ]
+        then
+            laa -n 1 --ignoreBc --noClustering --noPhasing \
+            --resultFile {output} \
+            --junkFile {params.junk} \
+            --reportFile {params.report_file} \
+            --inputReportFile {params.input_report} \
+            --subreadsReportPrefix laa/{wildcards.prefix}.haplotype{wildcards.haplotypeid}.subreads \
+            --whitelistReportFile {params.whitelist_report} \
+            --locusReportFile {params.locus_report} \
+            --whitelist {input.whitelist} {input.subreads} \
+        else
+            echo "creating placeholder outputs due to empty input"
+            for f in {output};
+                do touch $f;
+            done;
+        fi
+    """
+
 
 
 rule modify_laa_id:
