@@ -86,6 +86,7 @@ def cli_handler(similarity_threshold, inflation, embeddings, sequence_info):
                     "cluster": i,
                     "members": cluster,
                     "coverage": cluster_coverage(cluster, info),
+                    "molecules": len(cluster),
                 }
                 for i, cluster in enumerate(clusters) if len(cluster) > 0
             ],
