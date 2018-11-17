@@ -10,8 +10,9 @@ def cluster_filter(clusters, threshold, fraction, info):
     for cluster in sorted_clusters:
         cluster["members"] = cluster["members"][:int(fraction * len(cluster["members"]))]
         cluster["coverage"] = int(sum([info.iloc[c]["np"] for c in cluster["members"]]))
+        cluster["molecules"] = len(cluster["members"])
     cutoff = threshold * len(sorted_clusters[0]["members"])
-    return [c for c in sorted_clusters if len(c["members"]) >= cutoff]
+    return [c for c in sorted_clusters if cluster["molecules"] >= cutoff]
 
 
 @click.command(context_settings=dict(
