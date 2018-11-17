@@ -160,12 +160,12 @@ rule laa_consensus:
             --subreadsReportPrefix laa/{wildcards.prefix}.haplotype{wildcards.haplotypeid}.subreads \
             --whitelistReportFile {params.whitelist_report} \
             --locusReportFile {params.locus_report} \
-            --whitelist {input.whitelist} {input.subreads} \
+            --whitelist {input.whitelist} {input.subreads} 
         else
             echo "creating placeholder outputs due to empty input"
-            for f in {output};
-                do touch $f;
-            done;
+            for f in {output}
+                do touch $f
+            done
         fi
     """
 
