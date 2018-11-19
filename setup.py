@@ -57,6 +57,7 @@ setup(
             "ccs_amplicon.whitelist = ccs_amplicon.whitelist:cli_handler",
             "ccs_amplicon.clusterplot = ccs_amplicon.cluster_view:cli_handler",
             "ccs_amplicon.filter_clusters = ccs_amplicon.filter_clusters:cli_handler",
+            "ccs_amplicon.summarize_phasing = ccs_amplicon.phasing_summary:cli_handler"
         ]
     },
     classifiers=[
