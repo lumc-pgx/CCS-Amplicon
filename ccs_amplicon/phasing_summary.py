@@ -42,7 +42,7 @@ def cli_handler(info_file, cluster_file, tagged_bams):
                 assigned_phase[idx] = phase
     info["phase"] = assigned_phase
 
-    info.to_csv(sys.stderr, sep="\t", index=False)
+    info.to_csv(sys.stdout, sep="\t", index=False)
 
 if __name__ == '__main__':
     cli_handler()
