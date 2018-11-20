@@ -138,7 +138,7 @@ rule merge_haplotype_clusters:
 
 rule summarize_phasing:
     input:
-        tagged_bams = dynamic("phasing/{prefix}.clusters{clusterid}.tagged.bam"),
+        tagged_bams = dynamic("phasing/{prefix}.cluster{clusterid}.tagged.bam"),
         info = rules.ccs_info.output,
         clusters = rules.cluster.output
     output: "phasing/{prefix}.phasing.tsv"
