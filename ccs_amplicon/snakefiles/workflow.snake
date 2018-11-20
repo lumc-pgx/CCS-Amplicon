@@ -113,7 +113,9 @@ rule cluster_seqs:
 
 rule make_haplotypes:
     input: rules.cluster_seqs.output
-    output: "merge_laa/{prefix}.cluster{clusterid}.fastq"
+    output:
+        alleles = "merge_laa/{prefix}.cluster{clusterid}.fastq",
+        tagged_bams = "phasing/{prefix}.cluster{clusterid}.tagged.bam"
     message: "running haplotype workflow for cluster {wildcards.clusterid}"
     params: snakefile = srcdir("subworkflow.snake")
     shell: "snakemake -s {params.snakefile} --nolock "
@@ -131,3 +133,13 @@ rule merge_haplotype_clusters:
     output: "haplotypes/{prefix}.fastq"
     message: "merging haplotype sequences"
     shell: "cat {input} > {output}"
+
+
+rule summarize_phasing:
+    input:
+        tagged_bams = dynamic("phasing/{prefix}.clusters{clusterid}.tagged.bam"),
+        info = rules.ccs_info.output,
+        clusters = rules.cluster.output
+    output: "phasing/{prefix}.phasing.tsv"
+    message: "summarizing phasing"
+    shell: "ccs_amplicon.summarize_phasing {input.info} {info.clusters} info.tagged_bams > {output}"
