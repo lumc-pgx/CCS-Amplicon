@@ -6,7 +6,8 @@ if SUBWORKFLOW_PROFILE != "":
 rule all:
     input:
         "haplotypes/{}.fastq".format(config["PREFIX"]),
-        "clustering/{}.clustering.html".format(config["PREFIX"])
+        "clustering/{}.clustering.html".format(config["PREFIX"]),
+        "phasing/{}.phasing.tsv".format(config["PREFIX"])
 
 
 rule filter_ccs_bam:
@@ -142,4 +143,4 @@ rule summarize_phasing:
         clusters = rules.cluster.output
     output: "phasing/{prefix}.phasing.tsv"
     message: "summarizing phasing"
-    shell: "ccs_amplicon.summarize_phasing {input.info} {info.clusters} info.tagged_bams > {output}"
+    shell: "ccs_amplicon.summarize_phasing {input.info} {input.clusters} {input.tagged_bams} > {output}"
