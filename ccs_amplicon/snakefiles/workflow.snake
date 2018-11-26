@@ -136,7 +136,7 @@ rule view_clustering:
         embeddings = rules.embed.output.embeddings,
         info = rules.summarize_phasing.output
     output:
-        "phasing/{prefix}.clustering.html"
+        "phasing/{prefix}.html"
     message:
         "visualizing phased clusters"
     shell: "ccs_amplicon.clusterplot -t {wildcards.prefix} "
