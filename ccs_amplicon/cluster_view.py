@@ -18,15 +18,21 @@ def get_palette(size):
     return viridis(max(2, size))
 
 
-def make_cluster_plot(info, embeddings):
-    data = info.copy()
-    data["x"] = embeddings[0]
-    data["y"] = embeddings[1]
-    data["cluster"] = data["cluster"].astype(str)
-    data["phased"] = data.apply(lambda x: 0 if x["phase"] == -1 else 1, axis=1)
-    factors = sorted(list(set(data["cluster"])))
+def make_cluster_plot(data):
+    data = data.groupby("cluster").filter(lambda x: len(x) > 1).copy()
 
-    p=figure()
+    data["phased"] = data.apply(lambda x: 0 if x["phase"] == -1 else 1, axis=1)
+    factors = [str(c) for c in sorted(list(set(data["cluster"])))]
+    data["cluster"] = data["cluster"].astype(str)
+
+    TOOLTIPS = [
+        ("Passes", "@np"),
+        ("length", "@len"),
+        ("qual", "@rq"),
+    ]
+
+    p=figure(tooltips=TOOLTIPS)
+
     p.circle(
         x="x",
         y="y",
@@ -39,20 +45,21 @@ def make_cluster_plot(info, embeddings):
         name="sequences"
     )
 
+
     p.toolbar.logo = None
     return p
 
 
-def make_graph(info):
-    counts = info.groupby("cluster").count()
+def make_graph(data):
+    counts = data.groupby("cluster").count()
     color_map = get_palette(counts.shape[0])
 
     G = nx.DiGraph()
     G.add_node(
         "root",
-        size=info.shape[0],
-        r=10 * math.sqrt(info.shape[0] / math.pi),
-        name="root\n({})".format(info.shape[0]),
+        size=data.shape[0],
+        r=10 * math.sqrt(data.shape[0] / math.pi),
+        name="root\n({})".format(data.shape[0]),
         color="#C0C0C0",
         cluster=-1,
         phase=-1
@@ -72,7 +79,7 @@ def make_graph(info):
         )
         G.add_edge("root", node)
 
-        phasing = info[info["cluster"]==cluster].groupby("phase").count()
+        phasing = data[data["cluster"]==cluster].groupby("phase").count()
         phases = [x for x in phasing.index if x >= 0]
         for phase in phases:
             child = "{}.phase{}".format(node, phase)
@@ -107,8 +114,9 @@ def get_limits(layout):
     return (x_lim, y_lim)
 
 
-def make_phase_plot(info):
-    G = make_graph(info)
+def make_phase_plot(data):
+    data = data.groupby("cluster").filter(lambda x: len(x) > 1)
+    G = make_graph(data)
     layout = nx.nx_agraph.graphviz_layout(G, prog="twopi", root="root")
     (x_lim, y_lim) = get_limits(layout)
 
@@ -181,9 +189,9 @@ def add_phaseplot_callback(clusterplot, phaseplot):
     phaseplot_datasource.selected.js_on_change('indices', callback)
 
 
-def make_plot(embeddings, info, title):
-    clusterplot = make_cluster_plot(info, embeddings)
-    phaseplot = make_phase_plot(info)
+def make_plot(data, title):
+    clusterplot = make_cluster_plot(data)
+    phaseplot = make_phase_plot(data)
     add_phaseplot_callback(clusterplot, phaseplot)
     title_div = Div(text=title)
 
@@ -204,20 +212,18 @@ def make_plot(embeddings, info, title):
 @click.argument("info_file", type=click.Path(exists=True))
 @click.argument("plot_file", type=click.Path())
 def cli_handler(title, embedding_file, info_file, plot_file):
+    output_file(plot_file, title="Cluster report", mode="inline")
     try:
         embeddings = pd.read_csv(embedding_file, sep="\t", header=None)
         bam_info = pd.read_csv(info_file, sep="\t")
     except pd.errors.EmptyDataError:
-        pass
+        save(Div(text="No Data"))
+        return
 
-    output_file(plot_file, title="Cluster report", mode="inline")
+    embeddings.columns = ["x", "y"]
+    data = bam_info.join(embeddings)
 
-    if len(clusters) > 0:
-        figure = make_plot(embeddings, bam_info, title)
-    else:
-        figure = Div(text="No Data")
-
-    save(figure) 
+    save(make_plot(data, title))
 
 
 if __name__ == '__main__':
