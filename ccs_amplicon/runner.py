@@ -73,7 +73,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         MIN_VARIANT_QUAL = min_variant_qual,
         CCS_BAM = os.path.abspath(ccs_bam),
         SUBREADS_BAM = os.path.abspath(subreads_bam),
-        PROFILE = profile
+        PROFILE = profile,
     )
 
     config_items = ["{}={}".format(k, v) for k,v in config.items()]

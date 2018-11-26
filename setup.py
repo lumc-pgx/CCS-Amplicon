@@ -37,6 +37,7 @@ setup(
         "pysam",
         "click>=7.0",
         "markov_clustering>=0.0.5.dev0",
+        "networkx>=2.0",
         "biopython",
         "edlib",
         "tqdm",

@@ -6,9 +6,8 @@ if SUBWORKFLOW_PROFILE != "":
 rule all:
     input:
         "haplotypes/{}.fastq".format(config["PREFIX"]),
-        "clustering/{}.clustering.html".format(config["PREFIX"]),
-        "phasing/{}.phasing.tsv".format(config["PREFIX"])
-
+        "phasing/{}.html".format(config["PREFIX"])
+       
 
 rule filter_ccs_bam:
     input: config["CCS_BAM"]
@@ -89,20 +88,6 @@ rule filter_clusters:
         "{input.clusters} {input.info} > {output}"
 
 
-rule cluster_report:
-    input:
-        embeddings = rules.embed.output.embeddings,
-        clusters = rules.cluster.output,
-        filtered_clusters = rules.filter_clusters.output,
-        info = rules.ccs_info.output
-    output:
-        "clustering/{prefix}.clustering.html"
-    message:
-        "visualizing clusters"
-    shell: "ccs_amplicon.clusterplot -t {wildcards.prefix} "
-           "{input.clusters} {input.filtered_clusters} {input.embeddings} {input.info} {output}"
-
-
 rule cluster_seqs:
     input:
         seqs = rules.collapse_hp.output,
@@ -119,7 +104,7 @@ rule make_haplotypes:
         tagged_bams = "phasing/{prefix}.cluster{clusterid}.tagged.bam"
     message: "running haplotype workflow for cluster {wildcards.clusterid}"
     params: snakefile = srcdir("subworkflow.snake")
-    shell: "snakemake -s {params.snakefile} --nolock "
+    shell: "snakemake -s {params.snakefile} --rerun-incomplete --nolock "
            "{SUBWORKFLOW_PROFILE} "
            "--config PREFIX={wildcards.prefix}.cluster{wildcards.clusterid} "
            "CCS_BAM={config[CCS_BAM]} "
@@ -144,3 +129,15 @@ rule summarize_phasing:
     output: "phasing/{prefix}.phasing.tsv"
     message: "summarizing phasing"
     shell: "ccs_amplicon.summarize_phasing {input.info} {input.clusters} {input.tagged_bams} > {output}"
+
+
+rule view_clustering:
+    input:
+        embeddings = rules.embed.output.embeddings,
+        info = rules.summarize_phasing.output
+    output:
+        "phasing/{prefix}.clustering.html"
+    message:
+        "visualizing phased clusters"
+    shell: "ccs_amplicon.clusterplot -t {wildcards.prefix} "
+           "{input.embeddings} {input.info} {output}"
