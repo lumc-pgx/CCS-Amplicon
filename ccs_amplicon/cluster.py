@@ -8,7 +8,10 @@ import json
 
 def similarity_from_dists(dists):
     max_dist = np.max(dists)
-    return 1.0 - dists / max_dist
+    if max_dist > 0:
+        return 1.0 - dists / max_dist
+    else:
+        return 1.0 - np.array(dists)
 
 
 def euclidean_dist_squared(v1, v2):

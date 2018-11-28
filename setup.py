@@ -38,6 +38,7 @@ setup(
         "click>=7.0",
         "markov_clustering>=0.0.5.dev0",
         "networkx>=2.0",
+        "pygraphviz>=1.4rc1",
         "biopython",
         "edlib",
         "tqdm",
