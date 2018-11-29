@@ -19,8 +19,6 @@ def get_palette(size):
 
 
 def make_cluster_plot(data):
-    data = data.groupby("cluster").filter(lambda x: len(x) > 1).copy()
-
     data["phased"] = data.apply(lambda x: 0 if x["phase"] == -1 else 1, axis=1)
     factors = [str(c) for c in sorted(list(set(data["cluster"])))]
     data["cluster"] = data["cluster"].astype(str)
@@ -50,8 +48,8 @@ def make_cluster_plot(data):
     return p
 
 
-def make_graph(data):
-    counts = data.groupby("cluster").count()
+def make_graph(data, cluster_data):
+    counts = cluster_data.count()
     color_map = get_palette(counts.shape[0])
 
     G = nx.DiGraph()
@@ -115,7 +113,6 @@ def get_limits(layout):
 
 
 def make_phase_plot(data):
-    data = data.groupby("cluster").filter(lambda x: len(x) > 1)
     G = make_graph(data)
     layout = nx.nx_agraph.graphviz_layout(G, prog="twopi", root="root")
     (x_lim, y_lim) = get_limits(layout)
@@ -189,9 +186,9 @@ def add_phaseplot_callback(clusterplot, phaseplot):
     phaseplot_datasource.selected.js_on_change('indices', callback)
 
 
-def make_plot(data, title):
+def make_plot(data, cluster_data, title):
     clusterplot = make_cluster_plot(data)
-    phaseplot = make_phase_plot(data)
+    phaseplot = make_phase_plot(cluster_data)
     add_phaseplot_callback(clusterplot, phaseplot)
     title_div = Div(text=title)
 
@@ -222,8 +219,11 @@ def cli_handler(title, embedding_file, info_file, plot_file):
 
     embeddings.columns = ["x", "y"]
     data = bam_info.join(embeddings)
-
-    save(make_plot(data, title))
+    cluster_data = data.groupby("cluster").filter(lambda x: len(x) > 1).copy()
+    if cluster_data.shape[0] > 0:
+        save(make_plot(data, cluster_data, title))
+    else:
+        save(Div(text="No Data"))
 
 
 if __name__ == '__main__':
