@@ -79,7 +79,7 @@ rule phase:
     output: "phasing/{prefix}.phased.vcf"
     message: "phasing cluster"
     shell: """
-        if [ -s "{input.vcf}" ] && [ -s "{input.bam}" ]
+        if [ -s "{input.vcf}" ] && [ -s "{input.bam}" ] && [ $(samtools view -S -F0x4 "{input.bam}" | wc -l) -gt 0 ]
         then
             whatshap phase --indels {input.vcf} {input.bam} > {output}
         else
