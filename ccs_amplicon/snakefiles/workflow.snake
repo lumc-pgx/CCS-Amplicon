@@ -14,10 +14,10 @@ rule filter_ccs_bam:
     output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
     shell:
-        "bamtools filter -in {input} -out {output} "
-        "-length '>={config[MIN_READ_LENGTH]}' "
-        "-length '<={config[MAX_READ_LENGTH]}' "
-        "-tag 'np:>={config[MIN_PASSES]}' -tag 'rq:>={config[MIN_QUAL]}'"
+        "bamtools filter -in {input} -length '>={config[MIN_READ_LENGTH]}' | "
+        "bamtools filter -length '<={config[MAX_READ_LENGTH]}' | "
+        "bamtools filter -tag 'np:>={config[MIN_PASSES]}' | "
+        "bamtools filter -out {output} -tag 'rq:>={config[MIN_QUAL]}'"
 
 
 rule pbindex:
