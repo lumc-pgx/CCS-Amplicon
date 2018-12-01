@@ -28,6 +28,8 @@ from snakemake import snakemake
               help="Minimum required CCS sequence quality")
 @click.option("--max-homopolymer", type=click.IntRange(1, None), default=2,
               help="Homopolymer runs of length greater than max-homopolymer will be collapsed to this length")
+@click.option("--trim-ends", type=int, default=5,
+              help="remove n bases from start and ends of sequences before clustering")
 @click.option("--tsne-iterations", type=click.IntRange(1, None), default=5000,
               help="Number of iterations for tSNE")
 @click.option("--tsne-rate", type=click.IntRange(1, None), default=50,
@@ -51,7 +53,7 @@ from snakemake import snakemake
 @click.argument("ccs_bam", type=click.Path(exists=True))
 @click.argument("subreads_bam", type=click.Path(exists=True))
 def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
-                max_homopolymer, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
+                max_homopolymer, trim_ends, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
                 cluster_size_threshold, cluster_fraction, consensus_fraction, min_haplotype_molecules,
                 min_variant_qual, ccs_bam, subreads_bam,):
     # dict of config values to pass to snakemake
@@ -62,6 +64,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         MIN_PASSES = min_ccs_passes,
         MIN_QUAL = min_ccs_qual,
         MAX_HP_LEN = max_homopolymer,
+        TRIM_ENDS = trim_ends,
         TSNE_ITERS = tsne_iterations,
         TSNE_LR = tsne_rate,
         CLUSTER_SIMILARITY_PERCENTILE = cluster_percentile,

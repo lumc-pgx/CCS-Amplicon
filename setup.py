@@ -48,6 +48,7 @@ setup(
         "console_scripts": [
             "ccs_amplicon.workflow = ccs_amplicon.runner:cli_handler",
             "ccs_amplicon.baminfo = ccs_amplicon.baminfo:cli_handler",
+            "ccs_amplicon.trim_fasta = ccs_amplicon.trim_fasta:cli_handler",
             "ccs_amplicon.clusters = ccs_amplicon.cluster:cli_handler",
             "ccs_amplicon.collapse = ccs_amplicon.collapse_homopolymers:cli_handler",
             "ccs_amplicon.consensus = ccs_amplicon.consensus:cli_handler",

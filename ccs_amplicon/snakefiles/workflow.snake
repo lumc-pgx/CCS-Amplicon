@@ -36,8 +36,15 @@ rule bam2fasta:
     shell: "bam2fasta -o filtered/{wildcards.prefix} -u {input.bam}"
 
 
-rule collapse_hp:
+rule trim_fasta:
     input: rules.bam2fasta.output
+    output: "filtered/{prefix}.trimmed.fasta"
+    message: "trimming sequence ends"
+    shell: "ccs_amplicon.trim_ends -n {config[TRIM_ENDS]} {input} > {output}"
+
+
+rule collapse_hp:
+    input: rules.trim_fasta.output
     output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
     shell: "ccs_amplicon.collapse -s {config[MAX_HP_LEN]} {input} > {output}"
