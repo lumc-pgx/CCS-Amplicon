@@ -40,7 +40,7 @@ rule trim_fasta:
     input: rules.bam2fasta.output
     output: "filtered/{prefix}.trimmed.fasta"
     message: "trimming sequence ends"
-    shell: "ccs_amplicon.trim_ends -n {config[TRIM_ENDS]} {input} > {output}"
+    shell: "ccs_amplicon.trim_fasta -n {config[TRIM_ENDS]} {input} > {output}"
 
 
 rule collapse_hp:
