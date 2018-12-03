@@ -2,7 +2,7 @@
 from __future__ import print_function, division
 import pandas as pd
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist, squareform, euclidean
 import markov_clustering as mc
 import click
 import json
@@ -35,7 +35,7 @@ def sort_cluster_elements(cluster, embeddings, info):
         for i in range(n_dim)
     ]
     
-    offset = [euclidean_dist(cluster_center, embeddings[x]) for x in range(len(embeddings))]
+    offset = [euclidean(cluster_center, embeddings[x]) for x in range(len(embeddings))]
     sorted_cluster = sorted(cluster, key=lambda x: (-offset[x], info.iloc[x]["rq"]), reverse=True)
     return sorted_cluster
 
