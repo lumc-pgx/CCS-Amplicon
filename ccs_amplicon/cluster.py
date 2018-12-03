@@ -2,41 +2,25 @@
 from __future__ import print_function, division
 import pandas as pd
 import numpy as np
+from scipy.spatial.distance import pdist, squareform
 import markov_clustering as mc
 import click
 import json
 
-def similarity_from_dists(dists):
-    max_dist = np.max(dists)
-    if max_dist > 0:
-        return 1.0 - dists / max_dist
-    else:
-        return 1.0 - np.array(dists)
-
-
-def euclidean_dist_squared(v1, v2):
-    return np.sum([np.power(v1[i] - v2[i], 2) for i in range(len(v1))])
-
-
-def euclidean_dist(v1, v2):
-    return np.sqrt(euclidean_dist_squared(v1, v2))
+def similarity_from_dists(dists, percentile):
+    # similarity matrix from distance matrix
+    # using gaussian rbf
+    delta = np.percentile(dists, percentile)
+    return np.exp(-dists ** 2 / (2. * delta ** 2))
 
 
 def distances_from_embeddings(embeddings):
-    dists = []
-    for p1 in embeddings:
-        row = []
-        for p2 in embeddings:
-            dist = euclidean_dist(p1, p2)
-            row.append(dist)
-        dists.append(row)
-    return dists
+    return squareform(pdist(embeddings))
 
 
 def find_clusters(embeddings, similarity_threshold, inflation):
     dists = distances_from_embeddings(embeddings)
-    similarity = similarity_from_dists(dists)
-    similarity[similarity < np.percentile(similarity, similarity_threshold)] = 0
+    similarity = similarity_from_dists(dists, similarity_threshold)
     results = mc.run_mcl(similarity, inflation=inflation)
     clusters = sorted(mc.get_clusters(results), key=lambda x: len(x), reverse=True)
     return clusters
