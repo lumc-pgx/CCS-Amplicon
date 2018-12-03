@@ -37,7 +37,7 @@ def find_clusters(embeddings, similarity_threshold, inflation):
     dists = distances_from_embeddings(embeddings)
     similarity = similarity_from_dists(dists)
     similarity[similarity < np.percentile(similarity, similarity_threshold)] = 0
-    results = mc.run_mcl(similarity, inflation=1.4)
+    results = mc.run_mcl(similarity, inflation=inflation)
     clusters = sorted(mc.get_clusters(results), key=lambda x: len(x), reverse=True)
     return clusters
 
