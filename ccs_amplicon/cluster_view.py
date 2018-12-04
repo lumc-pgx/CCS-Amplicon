@@ -51,7 +51,6 @@ def make_cluster_plot(data):
 
 def make_graph(data):
     counts = data.groupby("cluster").count()
-    print(counts)
     color_map = get_palette(counts.shape[0])
 
     G = nx.DiGraph()
