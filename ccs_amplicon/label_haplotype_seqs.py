@@ -15,8 +15,7 @@ import sys
 @click.argument("sequence_fastq", type=click.Path(exists=True))
 def cli_handler(prefix, sequence_fastq):
     for record in SeqIO.parse(sequence_fastq, "fastq"):
-        coverage = record.id.split("_")[-1]
-        name = prefix + "_" + coverage
+        name = prefix
         record.id = name
         record.name = name
         record.description = name
