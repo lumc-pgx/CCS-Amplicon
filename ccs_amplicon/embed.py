@@ -13,19 +13,21 @@ import click
 )
 @click.option("--iterations", "-i", type=int, default=5000,
               help="maximum number of tSNE iterations")
-@click.option("--learning_rate", "-lr", type=int, default=50,
+@click.option("--learning-rate", "-lr", type=int, default=50,
               help="tSNE learning rate")
 @click.option("--seed", "-s", type=int, default=42,
               help="random seed to ensure reproducability")
+@click.option("--dimensions", "-d", type=int, default=2,
+              help="Number of dimensions for embedding")
 @click.argument("distance_matrix", type=click.Path(exists=True))
-def cli_handler(iterations, learning_rate, seed, distance_matrix):
+def cli_handler(iterations, learning_rate, seed, dimensions, distance_matrix):
     try:
         distances = pd.read_csv(distance_matrix, sep="\t", header=None)
     except pd.errors.EmptyDataError:
         sys.stderr.write("Empty distance matrix")
         return
     
-    tsne=TSNE(n_components=2, metric="precomputed", 
+    tsne=TSNE(n_components=dimensions, metric="precomputed",
           n_iter=iterations, learning_rate=learning_rate, 
           method="exact", verbose=2, random_state=seed)
 
@@ -35,7 +37,7 @@ def cli_handler(iterations, learning_rate, seed, distance_matrix):
 
     sys.stdout = old_stdout
     for e in embedded:
-        print("{}\t{}".format(e[0], e[1]))
+        print("\t".join([str(i) for i in e]))
 
 
 if __name__ == '__main__':

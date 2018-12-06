@@ -42,8 +42,8 @@ from snakemake import snakemake
                    "Higer values result in more clusters")
 @click.option("--cluster-size-threshold", type=click.FloatRange(0.0, 1.0), default=0.2,
               help="fraction of molecules relative to the largest cluster required for a cluster to be included")
-@click.option("--cluster-fraction", type=click.FloatRange(0.0, 1.0), default=0.8,
-              help="fraction of molecules to retain per-cluster")
+@click.option("--max-cluster-size", type=int, default=200,
+              help="maximum number of molecules to retain per-cluster")
 @click.option("--consensus-fraction", type=click.FloatRange(0.0, 1.0), default=0.51,
               help="Frequency of nucleotide at a given position required for rough consensus calling")
 @click.option("--min-haplotype-molecules", type=click.IntRange(1, None), default=10,
@@ -54,7 +54,7 @@ from snakemake import snakemake
 @click.argument("subreads_bam", type=click.Path(exists=True))
 def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
                 max_homopolymer, trim_ends, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
-                cluster_size_threshold, cluster_fraction, consensus_fraction, min_haplotype_molecules,
+                cluster_size_threshold, max_cluster_size, consensus_fraction, min_haplotype_molecules,
                 min_variant_qual, ccs_bam, subreads_bam,):
     # dict of config values to pass to snakemake
     config = dict(
@@ -70,7 +70,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         CLUSTER_SIMILARITY_PERCENTILE = cluster_percentile,
         CLUSTER_INFLATION = cluster_inflation,
         CLUSTER_SIZE_THRESHOLD=cluster_size_threshold,
-        CLUSTER_FRACTION=cluster_fraction,
+        MAX_CLUSTER_SIZE=max_cluster_size,
         CONSENSUS_FRACTION = consensus_fraction,
         MIN_HAPLOTYPE_MOLECULES = min_haplotype_molecules,
         MIN_VARIANT_QUAL = min_variant_qual,

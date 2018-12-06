@@ -49,7 +49,7 @@ def cluster_coverage(cluster, info):
     ),
     short_help="Identify clusters from a 2D embedding"
 )
-@click.option("--similarity_threshold", "-s", type=int, default=80,
+@click.option("--similarity-threshold", "-s", type=int, default=10,
               help="minimum similarity percentile")
 @click.option("--inflation", "-i", type=float, default=1.4,
               help="MCL cluster inflation")

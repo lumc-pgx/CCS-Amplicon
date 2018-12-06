@@ -91,7 +91,7 @@ rule filter_clusters:
     output: "clustering/{prefix}.clusters.filtered.json"
     message: "filtering clusters"
     shell:
-        "ccs_amplicon.filter_clusters -i {config[CLUSTER_SIZE_THRESHOLD]} -f {config[CLUSTER_FRACTION]} "
+        "ccs_amplicon.filter_clusters -i {config[CLUSTER_SIZE_THRESHOLD]} -m {config[MAX_CLUSTER_SIZE]} "
         "{input.clusters} {input.info} > {output}"
 
 

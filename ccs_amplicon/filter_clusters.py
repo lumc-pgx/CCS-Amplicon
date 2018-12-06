@@ -5,28 +5,34 @@ import click
 import json
 
 
-def cluster_filter(clusters, threshold, fraction, info):
+def cluster_filter(clusters, threshold, max_size, info):
     sorted_clusters = sorted(clusters, key=lambda x: len(x["members"]), reverse=True)
+    n_largest = len(sorted_clusters[0]["members"])
+    cutoff = threshold * n_largest
+
+    filtered_clusters = []
     for cluster in sorted_clusters:
-        cluster["members"] = cluster["members"][:int(fraction * len(cluster["members"]))]
-        cluster["coverage"] = int(sum([info.iloc[c]["np"] for c in cluster["members"]]))
-        cluster["molecules"] = len(cluster["members"])
-    cutoff = threshold * sorted_clusters[0]["molecules"]
-    return [c for c in sorted_clusters if c["molecules"] >= cutoff]
+        if len(cluster["members"]) >= cutoff:
+            cluster["members"] = cluster["members"][:min(len(cluster["members"]), max_size)]
+            cluster["coverage"] = int(sum([info.iloc[c]["np"] for c in cluster["members"]]))
+            cluster["molecules"] = len(cluster["members"])
+            filtered_clusters.append(cluster)
+
+    return filtered_clusters
 
 
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
-),
+    ),
     short_help="Filter clusters"
 )
-@click.option("--inclusion_threshold", "-i", type=click.FloatRange(0.0, 1.0), default=0.2,
+@click.option("--inclusion-threshold", "-i", type=click.FloatRange(0.0, 1.0), default=0.2,
               help="fraction of molecules relative to the largest cluster required for a cluster to be included")
-@click.option("--cluster_fraction", "-f", type=click.FloatRange(0.0, 1.0), default=0.8,
-              help="fraction of molecules to retain per-cluster")
+@click.option("--max-cluster-seqs", "-m", type=int, default=200,
+              help="maximum number of CCS sequences to retain per-cluster")
 @click.argument("clusters_json", type=click.Path(exists=True))
 @click.argument("sequence_info", type=click.Path(exists=True))
-def cli_handler(inclusion_threshold, cluster_fraction, clusters_json, sequence_info):
+def cli_handler(inclusion_threshold, max_cluster_seqs, clusters_json, sequence_info):
     with open(clusters_json, "r") as clusterfile:
         clusters = json.load(clusterfile)
 
@@ -36,7 +42,7 @@ def cli_handler(inclusion_threshold, cluster_fraction, clusters_json, sequence_i
         assert len(clusters) == 0
 
     if len(clusters) > 0:
-        filtered = cluster_filter(clusters, inclusion_threshold, cluster_fraction, info)
+        filtered = cluster_filter(clusters, inclusion_threshold, max_cluster_seqs, info)
     else:
         filtered = clusters
 
