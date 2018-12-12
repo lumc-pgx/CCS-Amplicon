@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+import sys
 import subprocess
 import click
 from snakemake import snakemake
@@ -42,7 +43,7 @@ from snakemake import snakemake
                    "Higer values result in more clusters")
 @click.option("--cluster-size-threshold", type=click.FloatRange(0.0, 1.0), default=0.2,
               help="fraction of molecules relative to the largest cluster required for a cluster to be included")
-@click.option("--max-cluster-size", type=int, default=200,
+@click.option("--max-cluster-size", type=click.IntRange(1, None), default=200,
               help="maximum number of molecules to retain per-cluster")
 @click.option("--consensus-fraction", type=click.FloatRange(0.0, 1.0), default=0.51,
               help="Frequency of nucleotide at a given position required for rough consensus calling")
@@ -50,12 +51,15 @@ from snakemake import snakemake
               help="Minimum number of molecules (CCS sequences) required for a haplotype")
 @click.option("--min-variant-qual", type=click.IntRange(0, None), default=50,
               help="Minimum variant qual score required for a variant to be used for phasing")
+@click.option("--max-phasing-seqs", type=click.IntRange(1, None), default=100,
+              help="Maximum number of sequences to use for pileup and phase set creation")
 @click.argument("ccs_bam", type=click.Path(exists=True))
 @click.argument("subreads_bam", type=click.Path(exists=True))
 def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
                 max_homopolymer, trim_ends, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
                 cluster_size_threshold, max_cluster_size, consensus_fraction, min_haplotype_molecules,
-                min_variant_qual, ccs_bam, subreads_bam,):
+                min_variant_qual, max_phasing_seqs, ccs_bam, subreads_bam,):
+
     # dict of config values to pass to snakemake
     config = dict(
         PREFIX = prefix,
@@ -74,6 +78,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         CONSENSUS_FRACTION = consensus_fraction,
         MIN_HAPLOTYPE_MOLECULES = min_haplotype_molecules,
         MIN_VARIANT_QUAL = min_variant_qual,
+        MAX_PHASING_SEQS = max_phasing_seqs,
         CCS_BAM = os.path.abspath(ccs_bam),
         SUBREADS_BAM = os.path.abspath(subreads_bam),
         PROFILE = profile,
@@ -92,7 +97,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
     if profile != "":
         snake_args += ["--profile", profile]
 
-    subprocess.run(snake_args)
+    sys.exit(subprocess.run(snake_args).returncode)
 
 
 if __name__ == "__main__":

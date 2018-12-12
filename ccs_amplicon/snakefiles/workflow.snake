@@ -118,7 +118,8 @@ rule make_haplotypes:
            "SUBREADS_BAM={config[SUBREADS_BAM]} "
            "CONSENSUS_FRACTION={config[CONSENSUS_FRACTION]} "
            "MIN_HAPLOTYPE_MOLECULES={config[MIN_HAPLOTYPE_MOLECULES]} "
-           "MIN_VARIANT_QUAL={config[MIN_VARIANT_QUAL]}"
+           "MIN_VARIANT_QUAL={config[MIN_VARIANT_QUAL]} "
+           "MAX_PHASING_SEQS={config[MAX_PHASING_SEQS]}"
 
 
 rule merge_haplotype_clusters:

@@ -1,9 +1,11 @@
 #! /usr/bin/env python
 from __future__ import print_function
+import random
 import pandas as pd
 import click
 import json
 
+random.seed(42)
 
 def cluster_filter(clusters, threshold, max_size, info):
     sorted_clusters = sorted(clusters, key=lambda x: len(x["members"]), reverse=True)
@@ -13,7 +15,7 @@ def cluster_filter(clusters, threshold, max_size, info):
     filtered_clusters = []
     for cluster in sorted_clusters:
         if len(cluster["members"]) >= cutoff:
-            cluster["members"] = cluster["members"][:min(len(cluster["members"]), max_size)]
+            cluster["members"] = random.sample(cluster["members"], min(len(cluster["members"]), max_size)) #cluster["members"][:min(len(cluster["members"]), max_size)]
             cluster["coverage"] = int(sum([info.iloc[c]["np"] for c in cluster["members"]]))
             cluster["molecules"] = len(cluster["members"])
             filtered_clusters.append(cluster)
