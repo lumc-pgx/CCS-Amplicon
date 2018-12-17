@@ -58,6 +58,9 @@ rule pileup:
 
 
 rule call:
+    """
+    Call variants
+    """
     input: rules.pileup.output
     output: "calls/{prefix}.bcf"
     message: "calling variants"
@@ -73,13 +76,19 @@ rule call:
 
 
 rule snp_filter:
+    """
+    Identify high quality SNPs from called variants
+    High quality SNPs are SNPs that -
+        1) Are not adjacent to indels
+        2) Have a QUAL score > some threshold
+    """
     input: rules.call.output
     output: "calls/{prefix}.snps.vcf"
     message: "filtering snps"
     shell: """
         if [ -s "{input}" ]
         then
-            vcffilter -v -f 'INDEL' {input} | vcffilter -f 'QUAL > {config[MIN_VARIANT_QUAL]}' > {output}
+            bcftools filter --SnpGap 1 {input} | bcftools filter -i 'TYPE="snp" & QUAL>{config[MIN_VARIANT_QUAL]}' > {output}
         else
             echo "creating placeholder vcf due to empty input"
             touch {output}
@@ -88,13 +97,19 @@ rule snp_filter:
 
 
 rule indel_filter:
+    """
+    Identify high quality indels from called variants
+    Indel quality is tricky to assess!
+    We choose here to retain indels with QUAL > some threshold, and IMF > 0.2
+    Additionally, where multiple indels overlap, retain only one of them.
+    """
     input: rules.call.output
     output: "calls/{prefix}.indels.vcf"
     message: "filtering indels"
     shell: """
         if [ -s "{input}" ]
         then
-            vcffilter -f 'INDEL' -f 'QUAL > {config[MIN_VARIANT_QUAL]}' -f 'IMF > 0.2' {input} | bcftools filter --IndelGap 2 > {output}
+            bcftools filter --IndelGap 1 {input} | bcftools filter -i 'TYPE="indel" & QUAL>{config[MIN_VARIANT_QUAL]} & IMF>0.2' > {output}
         else
             echo "creating placeholder vcf due to empty input"
             touch {output}
@@ -103,6 +118,11 @@ rule indel_filter:
 
 
 rule vcf_combine:
+    """
+    Create the vcf containing the variants to be used for phasing.
+    If there are heterozygous SNPs, use them.
+    Only include indels if no heterozygous SNPs were found.
+    """
     input:
         snps = rules.snp_filter.output,
         indels = rules.indel_filter.output
@@ -125,6 +145,9 @@ rule vcf_combine:
 
 
 rule normalize:
+    """
+    Normalize the set of variants to be phased
+    """
     input:
         vcf = rules.vcf_combine.output,
         ref = rules.consensus.output
@@ -142,6 +165,10 @@ rule normalize:
 
 
 rule phase:
+    """
+    Identify phase sets using whatshap.
+    Only phase on indels if no heterozygous SNPs are present in the input vcf.
+    """
     input:
         vcf = rules.normalize.output,
         bam = rules.align_to_consensus.output.bam,
@@ -151,7 +178,12 @@ rule phase:
     shell: """
         if [ -s "{input.vcf}" ] && [ -s "{input.bam}" ] && [ $(samtools view -S -F0x4 "{input.bam}" | wc -l) -gt 0 ]
         then
-            whatshap phase --indels --distrust-genotypes --reference {input.ref} {input.vcf} {input.bam} > {output}
+            if [ $(bcftools query -f '%TYPE\n' "{input.vcf}" | grep 'INDEL' | wc -l) -gt 0 ]
+            then
+                whatshap phase --indels --distrust-genotypes --reference {input.ref} {input.vcf} {input.bam} > {output}
+            else
+                whatshap phase --distrust-genotypes --reference {input.ref} {input.vcf} {input.bam} > {output}
+            fi
         else
             echo "creating placeholder phased vcf due to empty input"
             touch {output}
@@ -160,6 +192,9 @@ rule phase:
 
 
 rule sanitize:
+    """
+    Ensure that samples containing only a single, heterozygous SNP are assigned a phase
+    """
     input: rules.phase.output
     output:
         zip = "phasing/{prefix}.phased.sanitized.vcf.gz",
