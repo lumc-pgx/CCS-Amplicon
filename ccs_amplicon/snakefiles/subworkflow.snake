@@ -256,7 +256,7 @@ rule laa_consensus:
         whitelist_report = "laa/{prefix}.haplotype{haplotypeid}.whitelist_report.csv"
     message: "generating haplotype consensus"
     shell: """
-        if [ -s "{input.whitelist}" ] && [ -s "{input.subreads}" ]
+        if [ -s "{input.whitelist}" ] && [ -s "{input.subreads}" ] && [ "{config[MAKE_HAPLOTYPE_SEQS]}" == "True" ]
         then
             laa -n 1 --ignoreBc --noClustering --noPhasing \
             --resultFile {output} \

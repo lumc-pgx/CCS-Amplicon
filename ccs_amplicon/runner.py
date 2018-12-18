@@ -53,12 +53,14 @@ from snakemake import snakemake
               help="Minimum variant qual score required for a variant to be used for phasing")
 @click.option("--max-phasing-seqs", type=click.IntRange(1, None), default=100,
               help="Maximum number of sequences to use for pileup and phase set creation")
+@click.option("--no-haplotype-seqs", is_flag=True,
+              help="Do not generate phased haplotype sequences, only determine phasing of input sequences. ")
 @click.argument("ccs_bam", type=click.Path(exists=True))
 @click.argument("subreads_bam", type=click.Path(exists=True))
 def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
                 max_homopolymer, trim_ends, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
                 cluster_size_threshold, max_cluster_size, consensus_fraction, min_haplotype_molecules,
-                min_variant_qual, max_phasing_seqs, ccs_bam, subreads_bam,):
+                min_variant_qual, max_phasing_seqs, no_haplotype_seqs, ccs_bam, subreads_bam,):
 
     # dict of config values to pass to snakemake
     config = dict(
@@ -82,6 +84,7 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         CCS_BAM = os.path.abspath(ccs_bam),
         SUBREADS_BAM = os.path.abspath(subreads_bam),
         PROFILE = profile,
+        MAKE_HAPLOTYPE_SEQS = not no_haplotype_seqs
     )
 
     config_items = ["{}={}".format(k, v) for k,v in config.items()]

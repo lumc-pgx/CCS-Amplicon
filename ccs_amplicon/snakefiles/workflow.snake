@@ -119,7 +119,8 @@ rule make_haplotypes:
            "CONSENSUS_FRACTION={config[CONSENSUS_FRACTION]} "
            "MIN_HAPLOTYPE_MOLECULES={config[MIN_HAPLOTYPE_MOLECULES]} "
            "MIN_VARIANT_QUAL={config[MIN_VARIANT_QUAL]} "
-           "MAX_PHASING_SEQS={config[MAX_PHASING_SEQS]}"
+           "MAX_PHASING_SEQS={config[MAX_PHASING_SEQS]} "
+           "MAKE_HAPLOTYPE_SEQS={config[MAKE_HAPLOTYPE_SEQS]}"
 
 
 rule merge_haplotype_clusters:
