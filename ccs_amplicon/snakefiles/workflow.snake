@@ -9,15 +9,28 @@ rule all:
         "phasing/{}.html".format(config["PREFIX"])
        
 
-rule filter_ccs_bam:
+rule find_primers:
     input: config["CCS_BAM"]
+    output: "filtered/{prefix}.primed.bam"
+    message: "finding sequences with primers"
+    shell:
+        "ccs_amplicon.strip_primers "
+        "-f GCAGTCGAACATGTAGCTGACTCAGGTCACATGGCAGCTGCCATACAATCCACCTG "
+        "-r TGGATCACTTGTGCAAGCATCACATCGTAGCGACTGAGCCCTGGGAGGTAGGTAG "
+        "{input} {output}"
+
+
+rule filter_ccs_bam:
+    input: rules.find_primers.output
     output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
     shell:
         "bamtools filter -in {input} -length '>={config[MIN_READ_LENGTH]}' | "
         "bamtools filter -length '<={config[MAX_READ_LENGTH]}' | "
         "bamtools filter -tag 'np:>={config[MIN_PASSES]}' | "
-        "bamtools filter -out {output} -tag 'rq:>={config[MIN_QUAL]}'"
+        "bamtools filter -tag 'rq:>={config[MIN_QUAL]}' | "
+        "samtools view -h - | egrep '^@|pf:B:c,1,-2|pf:B:c,2,-1' | "
+        "samtools view -bS - > {output}"
 
 
 rule pbindex:
