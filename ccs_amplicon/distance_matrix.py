@@ -15,7 +15,7 @@ def get_direction(query, ref):
     rev = query.reverse_complement()
     d_fwd = edlib.align(str(fwd.seq), str(ref.seq), task="distance", mode="NW")["editDistance"]
     d_rev = edlib.align(str(rev.seq), str(ref.seq), task="distance", mode="NW")["editDistance"]
-    return fwd if d_fwd > d_rev else rev
+    return fwd if d_fwd < d_rev else rev
 
 
 def distance_matrix(sequences):
