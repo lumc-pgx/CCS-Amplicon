@@ -53,11 +53,13 @@ def make_graph(data):
     counts = data.groupby("cluster").count()
     color_map = get_palette(counts.shape[0])
 
+    scale = 25 / counts.shape[0]
+
     G = nx.DiGraph()
     G.add_node(
         "root",
-        size=data.shape[0],
-        r=10 * math.sqrt(data.shape[0] / math.pi),
+        n=data.shape[0],
+        size=scale * math.sqrt(data.shape[0] / math.pi),
         name="root\n({})".format(data.shape[0]),
         color="#C0C0C0",
         cluster=-1,
@@ -66,12 +68,12 @@ def make_graph(data):
 
     for cluster in counts.index:
         node = "cluster{}".format(cluster)
-        size = counts.loc[cluster].values[0]
+        n = counts.loc[cluster].values[0]
         G.add_node(
             node,
-            size=size,
-            r=10 * math.sqrt(size / math.pi),
-            name="{}\n({})".format(node, size),
+            n=n,
+            size=scale * math.sqrt(n / math.pi),
+            name="{}\n({})".format(node, n),
             color=color_map[cluster],
             cluster=cluster,
             phase=-1
@@ -82,12 +84,12 @@ def make_graph(data):
         phases = [x for x in phasing.index if x >= 0]
         for phase in phases:
             child = "{}.phase{}".format(node, phase)
-            size=phasing.loc[phase].values[0]
+            n=phasing.loc[phase].values[0]
             G.add_node(
                 child,
-                size=size,
-                r=10 * math.sqrt(size / math.pi),
-                name="phase{}\n({})".format(phase, size),
+                n=n,
+                size=scale * math.sqrt(n / math.pi),
+                name="phase{}\n({})".format(phase, n),
                 color=color_map[cluster],
                 cluster=cluster,
                 phase=phase
@@ -103,10 +105,13 @@ def get_limits(layout):
 
     x_lim = (min(xs), max(xs))
     y_lim = (min(ys), max(ys))
+
     x_range = max(1, x_lim[1] - x_lim[0])
     y_range = max(1, y_lim[1] - y_lim[0])
+
     x_pad = 0.2 * x_range
     y_pad = 0.2 * y_range
+
     x_lim = (x_lim[0] - x_pad, x_lim[1] + x_pad)
     y_lim = (y_lim[0] - y_pad, y_lim[1] + y_pad)
 
@@ -121,13 +126,13 @@ def make_phase_plot(data):
     p = figure(x_range=x_lim, y_range=y_lim)
 
     graph = from_networkx(G, layout, center=(0,0))
-    graph.node_renderer.glyph = Circle(size="r", fill_color="white", line_color="white")
+    graph.node_renderer.glyph = Circle(size="size", fill_color="white", line_color="white")
     graph.edge_renderer.glyph = MultiLine(line_color="black", line_alpha=0.5, line_width=1)
     graph.name="base_graph"
     p.renderers.append(graph)
 
     graph2 = from_networkx(G, layout, center=(0,0))
-    graph2.node_renderer.glyph = Circle(size="r", fill_color="color", fill_alpha=0.5, line_color="color")
+    graph2.node_renderer.glyph = Circle(size="size", fill_color="color", fill_alpha=0.5, line_color="color")
     graph2.edge_renderer.visible=False
     graph2.name="nodes"
     p.renderers.append(graph2)
