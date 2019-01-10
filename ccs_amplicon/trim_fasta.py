@@ -6,6 +6,8 @@ import click
 
 
 def trim_ends(record, n):
+    if n == 0:
+        return record
     try:
         return record[n:-n]
     except IndexError:
@@ -24,7 +26,7 @@ def trim_seqs(seqs, n):
 ),
     short_help="Trim nucleotides from start and end of sequences"
 )
-@click.option("--num-nucleotides", "-n", type=int, default=20,
+@click.option("--num-nucleotides", "-n", type=click.IntRange(0, None), default=20,
               help="number of nucleotides to remove from ends of sequence")
 @click.argument("input_fasta", type=click.Path(exists=True))
 def cli_handler(num_nucleotides, input_fasta):
