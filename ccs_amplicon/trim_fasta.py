@@ -27,7 +27,8 @@ def trim_seqs(seqs, n):
     short_help="Trim nucleotides from start and end of sequences"
 )
 @click.option("--num-nucleotides", "-n", type=click.IntRange(0, None), default=20,
-              help="number of nucleotides to remove from ends of sequence")
+              help="number of nucleotides to remove from ends of sequence. "
+                   "A value of 0 leaves the original sequence unaffected.")
 @click.argument("input_fasta", type=click.Path(exists=True))
 def cli_handler(num_nucleotides, input_fasta):
     seqs = SeqIO.parse(input_fasta, "fasta")
