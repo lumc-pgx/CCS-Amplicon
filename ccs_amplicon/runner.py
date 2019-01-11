@@ -10,57 +10,163 @@ from snakemake import snakemake
     ),
     short_help="CCS-driven amplicon phasing and polishing for targetted PacBio sequencing data"
 )
-@click.option("--directory", "-d", type=click.Path(file_okay=False), default=".",
-              help="Path to the directory which the program output will be written to."
-                   "If directory is omitted, output will be written to the current directory")
-@click.option("--prefix", "-p", type=str, default="ccs_amplicon",
-              help="Prefix to use for output file names")
-@click.option("--profile", "-po", type=str, default="",
-              help="The name of the snakemake profile to use when running the workflow."
-                   "Use this profile to control how the workflow is run on your specific compute architecture."
-                   "See https://snakemake.readthedocs.io/en/stable/executable.html?highlight=profile for details")
-@click.option("--min-ccs-length", type=click.IntRange(1, None), default=6000,
-              help="Minimum required CCS sequence length")
-@click.option("--max-ccs-length", type=click.IntRange(1, None), default=7000,
-              help="Maximum allowed CCS sequence length")
-@click.option("--min-ccs-passes", type=click.IntRange(1, None), default=1,
-              help="Minimum required CCS passes")
-@click.option("--min-ccs-qual", type=click.FloatRange(0.0, 1.0), default=0.98,
-              help="Minimum required CCS sequence quality")
-@click.option("--max-homopolymer", type=click.IntRange(1, None), default=2,
-              help="Homopolymer runs of length greater than max-homopolymer will be collapsed to this length")
-@click.option("--trim-ends", type=int, default=5,
-              help="remove n bases from start and ends of sequences before clustering")
-@click.option("--tsne-iterations", type=click.IntRange(1, None), default=5000,
-              help="Number of iterations for tSNE")
-@click.option("--tsne-rate", type=click.IntRange(1, None), default=50,
-              help="tSNE learning rate")
-@click.option("--cluster-percentile", type=click.IntRange(0, 100), default=80,
-              help="Cluster members with a similarity above this percentile are considered to be connected."
-                   "Lower values result in fewer, larger clusters.")
-@click.option("--cluster-inflation", type=click.FloatRange(0, None), default=1.4,
-              help="Markov clustering inflation parameter."
-                   "Higer values result in more clusters")
-@click.option("--cluster-size-threshold", type=click.FloatRange(0.0, 1.0), default=0.2,
-              help="fraction of molecules relative to the largest cluster required for a cluster to be included")
-@click.option("--max-cluster-size", type=click.IntRange(1, None), default=200,
-              help="maximum number of molecules to retain per-cluster")
-@click.option("--consensus-fraction", type=click.FloatRange(0.0, 1.0), default=0.51,
-              help="Frequency of nucleotide at a given position required for rough consensus calling")
-@click.option("--min-haplotype-molecules", type=click.IntRange(1, None), default=10,
-              help="Minimum number of molecules (CCS sequences) required for a haplotype")
-@click.option("--min-variant-qual", type=click.IntRange(0, None), default=50,
-              help="Minimum variant qual score required for a variant to be used for phasing")
-@click.option("--max-phasing-seqs", type=click.IntRange(1, None), default=100,
-              help="Maximum number of sequences to use for pileup and phase set creation")
-@click.option("--no-haplotype-seqs", is_flag=True,
-              help="Do not generate phased haplotype sequences, only determine phasing of input sequences. ")
-@click.argument("ccs_bam", type=click.Path(exists=True))
-@click.argument("subreads_bam", type=click.Path(exists=True))
-def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_ccs_passes, min_ccs_qual,
-                max_homopolymer, trim_ends, tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
-                cluster_size_threshold, max_cluster_size, consensus_fraction, min_haplotype_molecules,
-                min_variant_qual, max_phasing_seqs, no_haplotype_seqs, ccs_bam, subreads_bam,):
+@click.option(
+    "--directory", "-d",
+    type=click.Path(file_okay=False),
+    default=".",
+    help="Path to the directory which the program output will be written to. "
+         "If directory is omitted, output will be written to the current directory"
+)
+@click.option(
+    "--prefix", "-p",
+    type=str,
+    default="ccs_amplicon",
+    help="Prefix to use for output file names"
+)
+@click.option(
+    "--profile", "-po",
+    type=str,
+    default="",
+    help="The name of the snakemake profile to use when running the workflow. "
+         "Use this profile to control how the workflow is run on your specific compute architecture. "
+         "See https://snakemake.readthedocs.io/en/stable/executable.html?highlight=profile for details"
+)
+@click.option(
+    "--min-ccs-length",
+    type=click.IntRange(1, None),
+    default=6000,
+    help="Minimum required CCS sequence length"
+)
+@click.option(
+    "--max-ccs-length",
+    type=click.IntRange(1, None),
+    default=7000,
+    help="Maximum allowed CCS sequence length"
+)
+@click.option(
+    "--min-ccs-passes",
+    type=click.IntRange(1, None),
+    default=1,
+    help="Minimum required CCS passes"
+)
+@click.option(
+    "--min-ccs-qual",
+    type=click.FloatRange(0.0, 1.0),
+    default=0.98,
+    help="Minimum required CCS sequence quality"
+)
+@click.option(
+    "--max-homopolymer",
+    type=click.IntRange(0, None),
+    default=0,
+    help="Homopolymer runs of length greater than max-homopolymer will be collapsed to this length. "
+         "A value of 0 leaves the original sequences unaffected."
+)
+@click.option(
+    "--trim-ends",
+    type=click.IntRange(0, None),
+    default=0,
+    help="remove n bases from start and ends of sequences before clustering. "
+         "A value of 0 leaves the original sequences unaffected."
+)
+@click.option(
+    "--tsne-iterations",
+    type=click.IntRange(1, None),
+    default=5000,
+    help="Number of iterations for tSNE"
+)
+@click.option(
+    "--tsne-rate",
+    type=click.IntRange(1, None),
+    default=50,
+    help="tSNE learning rate"
+)
+@click.option(
+    "--cluster-percentile",
+    type=click.IntRange(0, 100),
+    default=80,
+    help="Cluster members with a similarity above this percentile are considered to be connected. "
+         "Lower values result in fewer, larger clusters."
+)
+@click.option(
+    "--cluster-inflation",
+    type=click.FloatRange(0, None),
+    default=1.4,
+    help="Markov clustering inflation parameter. "
+         "Higer values result in more clusters"
+)
+@click.option(
+    "--cluster-size-threshold",
+    type=click.FloatRange(0.0, 1.0),
+    default=0.2,
+    help="fraction of molecules relative to the largest cluster required for a cluster to be included"
+)
+@click.option(
+    "--max-cluster-size",
+    type=click.IntRange(1, None),
+    default=200,
+    help="maximum number of molecules to retain per-cluster"
+)
+@click.option(
+    "--consensus-fraction",
+    type=click.FloatRange(0.0, 1.0),
+    default=0.51,
+    help="Frequency of nucleotide at a given position required for rough consensus calling"
+)
+@click.option(
+    "--min-haplotype-molecules",
+    type=click.IntRange(1, None),
+    default=10,
+    help="Minimum number of molecules (CCS sequences) required for a haplotype"
+)
+@click.option(
+    "--min-variant-qual",
+    type=click.IntRange(0, None),
+    default=50,
+    help="Minimum variant qual score required for a variant to be used for phasing"
+)
+@click.option(
+    "--max-phasing-seqs",
+    type=click.IntRange(1, None),
+    default=100,
+    help="Maximum number of sequences to use for pileup and phase set creation"
+)
+@click.option(
+    "--no-haplotype-seqs",
+    is_flag=True,
+    help="Do not generate phased haplotype sequences, only determine phasing of input sequences. "
+)
+@click.option(
+    "--forward-primer", "-fp",
+    required=True,
+    help="forward primer sequence"
+)
+@click.option(
+    "--reverse-primer", "-rp",
+    required=True,
+    help="reverse primer sequence"
+)
+@click.option(
+    "--max-primer-dist", "-md",
+    type=click.IntRange(0, None),
+    default=5,
+    help="maximum edit distance for a primer hit"
+)
+@click.argument(
+    "ccs_bam",
+    type=click.Path(exists=True)
+)
+@click.argument(
+    "subreads_bam",
+    type=click.Path(exists=True)
+)
+def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length,
+                min_ccs_passes, min_ccs_qual, max_homopolymer, trim_ends,
+                tsne_iterations, tsne_rate, cluster_percentile, cluster_inflation,
+                cluster_size_threshold, max_cluster_size, consensus_fraction,
+                min_haplotype_molecules, min_variant_qual, max_phasing_seqs,
+                no_haplotype_seqs, forward_primer, reverse_primer, max_primer_dist,
+                ccs_bam, subreads_bam,):
 
     # dict of config values to pass to snakemake
     config = dict(
@@ -84,11 +190,20 @@ def cli_handler(directory, prefix, profile, min_ccs_length, max_ccs_length, min_
         CCS_BAM = os.path.abspath(ccs_bam),
         SUBREADS_BAM = os.path.abspath(subreads_bam),
         PROFILE = profile,
-        MAKE_HAPLOTYPE_SEQS = not no_haplotype_seqs
+        MAKE_HAPLOTYPE_SEQS = not no_haplotype_seqs,
+        FORWARD_PRIMER = forward_primer,
+        REVERSE_PRIMER = reverse_primer,
+        MAX_PRIMER_DIST = max_primer_dist
     )
 
     config_items = ["{}={}".format(k, v) for k,v in config.items()]
-    snakefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snakefiles/workflow.snake")
+
+    snakefile = os.path.join(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ),
+        "snakefiles/workflow.snake"
+    )
 
     snake_args = [
         "snakemake", "--rerun-incomplete", "--nolock",

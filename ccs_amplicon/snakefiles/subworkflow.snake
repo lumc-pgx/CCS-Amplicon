@@ -276,7 +276,6 @@ rule laa_consensus:
     """
 
 
-
 rule modify_laa_id:
     input: rules.laa_consensus.output
     output: "relabel_laa/{prefix}.haplotype{haplotypeid}.renamed.fastq"

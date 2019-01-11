@@ -15,8 +15,9 @@ rule find_primers:
     message: "finding sequences with primers"
     shell:
         "ccs_amplicon.strip_primers "
-        "-f GCAGTCGAACATGTAGCTGACTCAGGTCACATGGCAGCTGCCATACAATCCACCTG "
-        "-r TGGATCACTTGTGCAAGCATCACATCGTAGCGACTGAGCCCTGGGAGGTAGGTAG "
+        "-f {config[FORWARD_PRIMER]} "
+        "-r {config[REVERSE_PRIMER]} "
+        "-d {config[MAX_PRIMER_DIST]} "
         "{input} {output}"
 
 
