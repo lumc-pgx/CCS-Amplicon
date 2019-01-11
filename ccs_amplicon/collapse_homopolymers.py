@@ -31,14 +31,16 @@ def collapse_homopolymers(sequence, max_length=2):
     ),
     short_help="Hompolymer repeat collapser"
 )
-@click.option("--size", "-s", type=int, default=2,
-              help="maximum length of homopolymer repeats")
+@click.option("--size", "-s", type=click.IntRange(0, None), default=2,
+              help="maximum length of homopolymer repeats. "
+                   "A value of 0 leaves the original sequence unaffected.")
 @click.argument("input_fasta", type=click.Path(exists=True))
 def cli_handler(input_fasta, size):
     with open(input_fasta, "r") as infile:
         for record in SeqIO.parse(infile, "fasta"):
-            collapsed = collapse_homopolymers(record.seq, size)
-            record.seq = Seq.Seq(collapsed)
+            if size > 0:
+                collapsed = collapse_homopolymers(record.seq, size)
+                record.seq = Seq.Seq(collapsed)
             SeqIO.write(record, sys.stdout, "fasta")
 
 
