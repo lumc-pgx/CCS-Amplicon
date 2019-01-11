@@ -126,6 +126,7 @@ def find_and_remove_primers(bam_handle, f, r, max_dist):
         record.query_qualities = quals
         record.tags += [("pf", primers_found)]
         record.tags += [("pd", primer_scores)]
+        record.tags += [("pp", (start, end))]
 
         yield record
 
