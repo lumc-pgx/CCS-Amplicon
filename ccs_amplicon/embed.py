@@ -15,12 +15,14 @@ import click
               help="maximum number of tSNE iterations")
 @click.option("--learning-rate", "-lr", type=int, default=50,
               help="tSNE learning rate")
+@click.option("--method", "-m", type=click.Choice(["exact", "barnes_hut"]), default="exact",
+              help="gradient calculation method. Can be one of ('exact', 'barnes_hut')")
 @click.option("--seed", "-s", type=int, default=42,
               help="random seed to ensure reproducability")
 @click.option("--dimensions", "-d", type=int, default=2,
               help="Number of dimensions for embedding")
 @click.argument("distance_matrix", type=click.Path(exists=True))
-def cli_handler(iterations, learning_rate, seed, dimensions, distance_matrix):
+def cli_handler(iterations, learning_rate, method, seed, dimensions, distance_matrix):
     try:
         distances = pd.read_csv(distance_matrix, sep="\t", header=None)
     except pd.errors.EmptyDataError:
@@ -29,7 +31,7 @@ def cli_handler(iterations, learning_rate, seed, dimensions, distance_matrix):
     
     tsne=TSNE(n_components=dimensions, metric="precomputed",
           n_iter=iterations, learning_rate=learning_rate, 
-          method="exact", verbose=2, random_state=seed)
+          method=method, verbose=2, random_state=seed)
 
     old_stdout = sys.stdout
     sys.stdout = sys.stderr
