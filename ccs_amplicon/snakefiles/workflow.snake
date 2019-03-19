@@ -5,7 +5,7 @@ if SUBWORKFLOW_PROFILE != "":
 
 rule all:
     input:
-        "haplotypes/{}.fastq".format(config["PREFIX"]),
+        "haplotypes/{}.chimera_scan.tsv".format(config["PREFIX"]),
         "phasing/{}.html".format(config["PREFIX"])
        
 
@@ -164,3 +164,21 @@ rule view_clustering:
         "visualizing phased clusters"
     shell: "ccs_amplicon.clusterplot -t {wildcards.prefix} "
            "{input.embeddings} {input.info} {output}"
+
+
+rule haplotype_fasta:
+    input: rules.merge_haplotype_clusters.output
+    output: "haplotypes/{prefix}.fasta"
+    message: "converting haplotype fastq to fasta"
+    shell: "ccs_amplicon.fq2fa {input} > {output}"
+
+
+rule chimeras:
+    input:
+        alleles = rules.haplotype_fasta.output,
+        info = rules.summarize_phasing.output
+    output:
+        "haplotypes/{prefix}.chimera_scan.tsv"
+    message:
+        "looking for chimeras"
+    shell: "ccs_amplicon.tag_chimeras {input.alleles} {input.info} > {output}"

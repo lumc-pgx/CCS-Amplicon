@@ -62,7 +62,8 @@ setup(
             "ccs_amplicon.filter_clusters = ccs_amplicon.filter_clusters:cli_handler",
             "ccs_amplicon.summarize_phasing = ccs_amplicon.phasing_summary:cli_handler",
             "ccs_amplicon.strip_primers = ccs_amplicon.strip_primers:cli_handler",
-            "ccs_amplicon.tag_chimeras = ccs_amplicon.chimerism:cli_handler"
+            "ccs_amplicon.tag_chimeras = ccs_amplicon.chimerism:cli_handler",
+            "ccs_amplicon.fq2fa = ccs_amplicon.fq_to_fa:cli_handler"
         ]
     },
     classifiers=[
