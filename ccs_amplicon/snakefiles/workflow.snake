@@ -10,6 +10,10 @@ rule all:
        
 
 rule find_primers:
+    """
+    Search the CCS sequences for the forward and reverse primers.
+    Tag the records for filtering downstream.
+    """
     input: config["CCS_BAM"]
     output: "filtered/{prefix}.primed.bam"
     message: "finding sequences with primers"
@@ -22,6 +26,14 @@ rule find_primers:
 
 
 rule filter_ccs_bam:
+    """
+    Filter the CCS sequences to remove junk.
+    Retain CCS sequences which pass the following thresholds:
+        length >= MIN_READ_LENGTH <= MAX_READ_LENGTH
+        number of passes (np) >= MIN_PASSES
+        read quality (rq) >= MIN_QUAL
+        forward and reverse primer present with the correct orientation        
+    """
     input: rules.find_primers.output
     output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
@@ -35,6 +47,9 @@ rule filter_ccs_bam:
 
 
 rule pbindex:
+    """
+    Generate a pacbio index for the filtered CCS bam
+    """
     input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.pbi"
     message: "generating pacbio index for bam"
@@ -42,6 +57,9 @@ rule pbindex:
 
 
 rule bam2fasta:
+    """
+    Convert to fasta
+    """
     input:
         bam = rules.filter_ccs_bam.output,
         index = rules.pbindex.output
@@ -51,6 +69,10 @@ rule bam2fasta:
 
 
 rule trim_fasta:
+    """
+    Remove TRIM_ENDS number of nucleotides from the start and end of
+    each sequence
+    """
     input: rules.bam2fasta.output
     output: "filtered/{prefix}.trimmed.fasta"
     message: "trimming sequence ends"
@@ -58,6 +80,12 @@ rule trim_fasta:
 
 
 rule collapse_hp:
+    """
+    Collapse homopolymer runs longer than MAX_HP_LEN to be exactly MAX_HP_LEN.
+    e.g.
+        MAX_HP_LEN=2
+        CTGAAAAAAGGC => CTGAAGGC
+    """
     input: rules.trim_fasta.output
     output: "collapsed/{prefix}.collapse_hp.fasta"
     message: "collapsing homopolymer runs"
@@ -65,6 +93,10 @@ rule collapse_hp:
 
 
 rule distance_matrix:
+    """
+    Generate a distance matrix from the all-pairs alignment of the 
+    input sequences.
+    """
     input: rules.collapse_hp.output
     output: "clustering/{prefix}.dists.tsv"
     message: "creating distance matrix"
@@ -72,6 +104,9 @@ rule distance_matrix:
 
 
 rule embed:
+    """
+    Use t-SNE to generate an 2D embedding of the distance matrix
+    """
     input: rules.distance_matrix.output
     output:
         embeddings = "clustering/{prefix}.embedded.tsv",
@@ -82,6 +117,9 @@ rule embed:
 
 
 rule ccs_info:
+    """
+    Summarize some properties of the filtered CCS sequences
+    """
     input: rules.filter_ccs_bam.output
     output: "filtered/{prefix}.bam.info"
     message: "generating summary information for CCS sequences"
@@ -89,6 +127,9 @@ rule ccs_info:
 
 
 rule cluster:
+    """
+    Identify clusters within the 2D embedded sequences.
+    """
     input:
         embeddings = rules.embed.output.embeddings,
         info = rules.ccs_info.output
@@ -99,6 +140,12 @@ rule cluster:
            "{input.embeddings} {input.info} > {output}"
 
 rule filter_clusters:
+    """
+    Filter the clusters to remove noise and keep the data manageable.
+    Clusters containing less than CLUSTER_SIZE_THRESHOLD sequences are discarded.
+    Clusters containing more than MAX_CLUSTER_SIZE sequences are downsampled
+    to MAX_CLUSTER_SIZE.
+    """
     input:
         clusters = rules.cluster.output,
         info = rules.ccs_info.output
@@ -110,6 +157,9 @@ rule filter_clusters:
 
 
 rule cluster_seqs:
+    """
+    Create a fasta file containing the sequences for each cluster.
+    """
     input:
         seqs = rules.collapse_hp.output,
         clusters = rules.filter_clusters.output
@@ -119,6 +169,19 @@ rule cluster_seqs:
 
 
 rule make_haplotypes:
+    """
+    Phase the sequences for each cluster and generate allele sequences.
+    
+    NOTE
+    Because the number of clusters is not known at invocation time, the inputs
+    to this rule are dynamic.
+    Some of the subsequent steps also generate a number of output files
+    which is not known prior to invocation. 
+    The result of this is that we have dynamic outputs which generate more
+    dynamic outputs. Snakemake says no.
+    To solve this situation, the phasing is performed in a separate,
+    isolated workflow.
+    """
     input: rules.cluster_seqs.output
     output:
         alleles = "merge_laa/{prefix}.cluster{clusterid}.fastq",
@@ -138,6 +201,10 @@ rule make_haplotypes:
 
 
 rule merge_haplotype_clusters:
+    """
+    The haplotyping workflow generates one fastq of allele sequences per cluster -
+    merge these together into a single file.
+    """
     input: dynamic("merge_laa/{prefix}.cluster{clusterid}.fastq")
     output: "haplotypes/{prefix}.fastq"
     message: "merging haplotype sequences"
@@ -145,6 +212,9 @@ rule merge_haplotype_clusters:
 
 
 rule summarize_phasing:
+    """
+    Generate some summary information about the phasing
+    """
     input:
         tagged_bams = dynamic("phasing/{prefix}.cluster{clusterid}.tagged.bam"),
         info = rules.ccs_info.output,
@@ -155,6 +225,9 @@ rule summarize_phasing:
 
 
 rule view_clustering:
+    """
+    Make some pretty pictures from the clustering and phasing
+    """
     input:
         embeddings = rules.embed.output.embeddings,
         info = rules.summarize_phasing.output
@@ -167,6 +240,9 @@ rule view_clustering:
 
 
 rule haplotype_fasta:
+    """
+    Convert fasta of allele sequences to fastq
+    """
     input: rules.merge_haplotype_clusters.output
     output: "haplotypes/{prefix}.fasta"
     message: "converting haplotype fastq to fasta"
@@ -174,6 +250,9 @@ rule haplotype_fasta:
 
 
 rule chimeras:
+    """
+    Try to identify sequences which appear to be chimeric
+    """
     input:
         alleles = rules.haplotype_fasta.output,
         info = rules.summarize_phasing.output
