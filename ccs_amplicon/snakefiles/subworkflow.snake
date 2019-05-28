@@ -3,6 +3,9 @@ rule all:
 
 
 rule mafft_msa:
+    """
+    Multiple sequence alignment using MAFFT
+    """
     input: "clustering/{prefix}.fasta"
     output: "consensus/{prefix}.msa"
     message: "mafft alignment of cluster sequences"
@@ -10,6 +13,9 @@ rule mafft_msa:
 
 
 rule consensus:
+    """
+    Generate approximate consensus sequence from multiple sequence alignment
+    """
     input: rules.mafft_msa.output
     output: "consensus/{prefix}.consensus.fasta"
     message: "generating cluster consensus sequence"
@@ -18,6 +24,9 @@ rule consensus:
 
 
 rule align_to_consensus:
+    """
+    Align input sequences to the consensus sequence
+    """
     input:
         consensus = rules.consensus.output,
         reads = "clustering/{prefix}.fasta"
@@ -40,6 +49,9 @@ rule align_to_consensus:
 
 
 rule pileup:
+    """
+    Generate a pileup from the sequences aligned to the consensus
+    """
     input:
         bam = rules.align_to_consensus.output.bam,
         consensus = rules.consensus.output
@@ -59,7 +71,8 @@ rule pileup:
 
 rule call:
     """
-    Call variants
+    Call variants based on differences between the input sequences and
+    the consensus sequence
     """
     input: rules.pileup.output
     output: "calls/{prefix}.bcf"
@@ -80,7 +93,7 @@ rule snp_filter:
     Identify high quality SNPs from called variants
     High quality SNPs are SNPs that -
         1) Are not adjacent to indels
-        2) Have a QUAL score > some threshold
+        2) Have a QUAL score > MIN_VARIANT_QUAL
     """
     input: rules.call.output
     output: "calls/{prefix}.snps.vcf"
@@ -100,7 +113,7 @@ rule indel_filter:
     """
     Identify high quality indels from called variants
     Indel quality is tricky to assess!
-    We choose here to retain indels with QUAL > some threshold, and IMF > 0.2
+    We choose here to retain indels with QUAL > MIN_VARIANT_QUAL, and IMF > 0.2
     Additionally, where multiple indels overlap, retain only one of them.
     """
     input: rules.call.output
@@ -193,7 +206,8 @@ rule phase:
 
 rule sanitize:
     """
-    Ensure that samples containing only a single, heterozygous SNP are assigned a phase
+    Ensure that samples containing only a single, heterozygous SNP are
+    assigned a phase.
     """
     input: rules.phase.output
     output:
@@ -214,6 +228,9 @@ rule sanitize:
 
 
 rule haplotag:
+    """
+    Determine which of the phase sets the input sequences belong to
+    """
     input:
         vcf = rules.sanitize.output.zip,
         bam = rules.align_to_consensus.output.bam,
@@ -236,6 +253,11 @@ rule haplotag:
 
 
 rule whitelist:
+    """
+    Generate a list of sequence ids belonging to each phase set.
+    This will be used to specify which sequences LAA will generate
+    consensus for. 
+    """
     input: rules.haplotag.output.bam
     output: dynamic("laa/{prefix}.haplotype{haplotypeid}.whitelist")
     message: "generating whitelists"
@@ -243,6 +265,13 @@ rule whitelist:
 
 
 rule laa_consensus:
+    """
+    Use LAA to generate a polished consensus sequence for each phase set.
+    
+    NOTE:
+    Using LAA for this is overkill, but the functionality to do this in
+    a cleaner way is not exposed by the LAA tools.
+    """
     input:
         subreads = config["SUBREADS_BAM"],
         whitelist = rules.whitelist.output
@@ -277,6 +306,10 @@ rule laa_consensus:
 
 
 rule modify_laa_id:
+    """
+    Change the sequence headers of the allele sequences to include information
+    on the cluster and phase which they belong to.
+    """
     input: rules.laa_consensus.output
     output: "relabel_laa/{prefix}.haplotype{haplotypeid}.renamed.fastq"
     message: "updating haplotype sequence name"
@@ -284,6 +317,9 @@ rule modify_laa_id:
 
 
 rule merge_laa:
+    """
+    Gather all allele sequences together into a single file.
+    """
     input: dynamic("relabel_laa/{prefix}.haplotype{haplotypeid}.renamed.fastq")
     output: "merge_laa/{prefix}.fastq"
     message: "merging cluster haplotype sequences"
