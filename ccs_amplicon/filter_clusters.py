@@ -10,7 +10,7 @@ random.seed(42)
 def cluster_filter(clusters, threshold, max_size, info):
     sorted_clusters = sorted(clusters, key=lambda x: len(x["members"]), reverse=True)
     n_largest = len(sorted_clusters[0]["members"])
-    cutoff = threshold * n_largest
+    cutoff = max(2, threshold * n_largest) # exclude singleton clusters and those with few members
 
     filtered_clusters = []
     for cluster in sorted_clusters:
