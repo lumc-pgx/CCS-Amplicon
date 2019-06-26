@@ -8,17 +8,51 @@ import click
 import json
 
 def similarity_from_dists(dists, percentile):
-    # similarity matrix from distance matrix
-    # using gaussian rbf
-    delta = np.percentile(dists, percentile)
-    return np.exp(-dists ** 2 / (2. * delta ** 2))
+    """
+    Convert a distance matrix to a similarity matrix using Gaussian RBF.
+    
+    :param dists: distance matrix
+    :type dists: numpy array-like
+    :param percentile: Parameter used to tune the RBF.
+    :type percentile: real number
+    :return: the similarity matrix
+    :rtype: numpy array 
+    """
+    # determine sigma based on the 'percentile' percentile of the distances
+    sigma = np.percentile(dists, percentile)
+    # RBF
+    return np.exp(-dists ** 2 / (2. * sigma ** 2))
 
 
 def distances_from_embeddings(embeddings):
+    """
+    Convert t-SNE embeddings into a euclidean distance matrix
+    
+    :param embeddings: embedded data
+    :type embeddings: numpy array-like
+    :return: distance matrix
+    :rtype: numpy array
+    """
     return squareform(pdist(embeddings))
 
 
 def find_clusters(embeddings, similarity_threshold, inflation):
+    """
+    Identify clusters within embedded data.
+    
+    :param embeddings: embedded data
+    :type embeddings: numpy array-like
+    :param similarity_threshold: Can be used to tune the clustering
+                                 performance.
+    :type similarity_threshold: real number
+    :param inflation: Markov clustering inflation. Used to control the
+                      granularity of the clustering. Low values give 
+                      fewer, larger clusters. Higher values give more,
+                      smaller clusters.
+    :type inflation: real number
+    :return: The identified clusters
+    :rtype: dict
+    """
     dists = distances_from_embeddings(embeddings)
     similarity = similarity_from_dists(dists, similarity_threshold)
     results = mc.run_mcl(similarity, inflation=inflation)

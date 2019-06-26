@@ -16,13 +16,17 @@ import click
 
 
 @click.command(context_settings=dict(
-    ignore_unknown_options=True,
+    help_option_names=["-h", "--help"]
     ),
     short_help="Classify sequences which appear to be chimeric"
 )
 @click.argument("input_fasta", type=click.Path(exists=True))
 @click.argument("phased_tsv", type=click.Path(exists=True))
 def cli_handler(input_fasta, phased_tsv):
+    """
+    Attempt to identify PCR chimeras from the phased allele sequences
+    in INPUT_FASTA and the phasing summary information from PHASED_TSV.
+    """
     # generate multiple sequence alignment from input sequences
     alignment = subprocess.run(
         ["mafft", "--auto", "--quiet", "--thread", "1", "--adjustdirection", input_fasta],
