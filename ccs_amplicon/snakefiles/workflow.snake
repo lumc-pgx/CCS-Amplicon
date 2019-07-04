@@ -17,19 +17,45 @@ rule find_primers:
     input: config["CCS_BAM"]
     output: "filtered/{prefix}.primed.bam"
     message: "finding sequences with primers"
+    params:
+        fwd = "-f {}".format(config["FORWARD_PRIMER"]) if config["FORWARD_PRIMER"] else "",
+        rev = "-r {}".format(config["REVERSE_PRIMER"]) if config["REVERSE_PRIMER"] else ""
     shell:
         "ccs_amplicon.strip_primers "
-        "-f {config[FORWARD_PRIMER]} "
-        "-r {config[REVERSE_PRIMER]} "
+        "{params.fwd} "
+        "{params.rev} "
         "-d {config[MAX_PRIMER_DIST]} "
         "{input} {output}"
+
+
+def primer_filter_string():
+    """construct the regular expression for filtering primers"""
+    
+    # both forward (fwd) and reverse (rev) primers are expected
+    # allow sequences which start with fwd and end with rev'
+    # or start with rev and end with fwd'
+    if config["FORWARD_PRIMER"] and config["REVERSE_PRIMER"]:
+        return "^@|pf:B:[Cc],1,-2|pf:B:[Cc],2,-1"
+    
+    # only fwd provided
+    # allow sequences which start with fwd or end with fwd'
+    if config["FORWARD_PRIMER"]:
+        return "^@|pf:B:[Cc],1,0|pf:B:[Cc],0,-1"
+    
+    # only rev provided
+    # allow sequences which start with rev or end with rev'
+    if config["REVERSE_PRIMER"]:
+        return "^@|pf:B:[Cc],2,0|pf:B:[Cc],0,-2"
+    
+    # no primers provided, allow 'null primer'
+    return "^@|pf:B:[Cc],0,0"
 
 
 rule filter_ccs_bam:
     """
     Filter the CCS sequences to remove junk.
     Retain CCS sequences which pass the following thresholds:
-        length >= MIN_READ_LENGTH <= MAX_READ_LENGTH
+        MIN_READ_LENGTH <= length <= MAX_READ_LENGTH
         number of passes (np) >= MIN_PASSES
         read quality (rq) >= MIN_QUAL
         forward and reverse primer present with the correct orientation        
@@ -37,12 +63,13 @@ rule filter_ccs_bam:
     input: rules.find_primers.output
     output: "filtered/{prefix}.bam",
     message: "filtering CCS bam file"
+    params: primer_string = primer_filter_string()
     shell:
         "bamtools filter -in {input} -length '>={config[MIN_READ_LENGTH]}' | "
         "bamtools filter -length '<={config[MAX_READ_LENGTH]}' | "
         "bamtools filter -tag 'np:>={config[MIN_PASSES]}' | "
         "bamtools filter -tag 'rq:>={config[MIN_QUAL]}' | "
-        "samtools view -h - | egrep '^@|pf:B:c,1,-2|pf:B:c,2,-1' | "
+        "samtools view -h - | egrep '{params.primer_string}' | "
         "samtools view -bS - > {output}"
 
 

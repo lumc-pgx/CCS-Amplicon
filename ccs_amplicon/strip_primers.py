@@ -55,45 +55,48 @@ def find_primers(f, r, target, max_dist):
     primers_found = [NULL_PRIMER, NULL_PRIMER]
     primer_scores = [NULL_SCORE, NULL_SCORE]
 
-    # align and score
-    f_aln = align(f, seq)        # forward vs seq
-    f_rc_aln = align(f, seq_rc)  # forward vs revcomp(seq)
-
-    f_score = f_aln["editDistance"]
-    f_rc_score = f_rc_aln["editDistance"]
-
-    r_aln = align(r, seq)        # rev vs seq
-    r_rc_aln = align(r, seq_rc)  # rev vs revcomp(seq)
-
-    r_score = r_aln["editDistance"]
-    r_rc_score = r_rc_aln["editDistance"]
-
     # start and end positions for trimmed sequence
     start, end = (0, 0)
 
-    # forward primer match
-    if f_score <= max_dist:
-        primers_found[START_IDX] = F_PRIMER
-        primer_scores[START_IDX] = f_score
-        start = f_aln["locations"][-1][-1] + 1
+    if f:
+        # align and score
+        f_aln = align(f, seq)        # forward vs seq
+        f_rc_aln = align(f, seq_rc)  # forward vs revcomp(seq)
 
-    # forward primer revcomp match
-    if f_rc_score <= max_dist:
-        primers_found[END_IDX] = F_RC_PRIMER
-        primer_scores[END_IDX] = f_rc_score
-        end = -f_rc_aln["locations"][-1][-1] - 1
+        f_score = f_aln["editDistance"]
+        f_rc_score = f_rc_aln["editDistance"]
 
-    # reverse primer match
-    if r_score <= max_dist:
-        primers_found[START_IDX] = R_PRIMER
-        primer_scores[START_IDX] = r_score
-        start = r_aln["locations"][-1][-1] + 1
+        # forward primer match
+        if f_score <= max_dist:
+            primers_found[START_IDX] = F_PRIMER
+            primer_scores[START_IDX] = f_score
+            start = f_aln["locations"][-1][-1] + 1
 
-    # reverse primer revcomp match
-    if r_rc_score <= max_dist:
-        primers_found[END_IDX] = R_RC_PRIMER
-        primer_scores[END_IDX] = r_rc_score
-        end = -r_rc_aln["locations"][-1][-1] - 1
+        # forward primer revcomp match
+        if f_rc_score <= max_dist:
+            primers_found[END_IDX] = F_RC_PRIMER
+            primer_scores[END_IDX] = f_rc_score
+            end = -f_rc_aln["locations"][-1][-1] - 1
+
+    if r:
+        # align and score
+        r_aln = align(r, seq)        # rev vs seq
+        r_rc_aln = align(r, seq_rc)  # rev vs revcomp(seq)
+
+        r_score = r_aln["editDistance"]
+        r_rc_score = r_rc_aln["editDistance"]
+
+        # reverse primer match
+        if r_score <= max_dist:
+            primers_found[START_IDX] = R_PRIMER
+            primer_scores[START_IDX] = r_score
+            start = r_aln["locations"][-1][-1] + 1
+
+        # reverse primer revcomp match
+        if r_rc_score <= max_dist:
+            primers_found[END_IDX] = R_RC_PRIMER
+            primer_scores[END_IDX] = r_rc_score
+            end = -r_rc_aln["locations"][-1][-1] - 1
 
     return primers_found, primer_scores, start, end
 
@@ -131,11 +134,9 @@ def find_and_remove_primers(bam_handle, f, r, max_dist):
         yield record
 
 
-@click.command(
-    context_settings=dict(
-        ignore_unknown_options=False,
+@click.command(context_settings=dict(
+    help_option_names=["-h", "--help"]
     ),
-    short_help="Identify and remove primers from sequences"
 )
 @click.argument(
     "input_bamfile",
@@ -155,12 +156,14 @@ def find_and_remove_primers(bam_handle, f, r, max_dist):
 )
 @click.option(
     "--forward", "-f",
-    required=True,
+    type=click.STRING,
+    default="",
     help="forward primer sequence"
 )
 @click.option(
     "--reverse", "-r",
-    required=True,
+    type=click.STRING,
+    default="",
     help="reverse primer sequence"
 )
 @click.option(
@@ -170,7 +173,7 @@ def find_and_remove_primers(bam_handle, f, r, max_dist):
     help="maximum edit distance for a primer hit"
 )
 def cli_handler(input_bamfile, output_bamfile, forward, reverse, max_dist):
-
+    """Identify and remove primers from sequences"""
     with pysam.AlignmentFile(input_bamfile, "rb",
                              check_sq=False) as input_handle:
         with pysam.AlignmentFile(output_bamfile, "wb",

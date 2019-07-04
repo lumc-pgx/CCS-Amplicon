@@ -138,12 +138,12 @@ from snakemake import snakemake
 )
 @click.option(
     "--forward-primer", "-fp",
-    required=True,
+    default="",
     help="forward primer sequence"
 )
 @click.option(
     "--reverse-primer", "-rp",
-    required=True,
+    default="",
     help="reverse primer sequence"
 )
 @click.option(
